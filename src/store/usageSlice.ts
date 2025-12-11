@@ -41,7 +41,8 @@ export const usageSlice = createSlice({
         activateTrial: (state) => {
             if (!state.trialActivatedAt) {
                 const now = new Date();
-                const expiresAt = new Date(now.getTime() + TRIAL_DURATION_HOURS * 60 * 60 * 1000);
+                // 18 minutes trial
+                const expiresAt = new Date(now.getTime() + 18 * 60 * 1000);
 
                 state.trialActivatedAt = now.toISOString();
                 state.trialExpiresAt = expiresAt.toISOString();

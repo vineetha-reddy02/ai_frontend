@@ -4,6 +4,7 @@ import { Check, Star, Shield, Zap, AlertCircle, ArrowLeft } from 'lucide-react';
 import Button from '../../components/Button';
 import { subscriptionsService } from '../../services/subscriptions';
 import { paymentsService } from '../../services/payments';
+import { updateUserSubscription } from '../../store/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { showToast } from '../../store/uiSlice';
@@ -41,35 +42,31 @@ const UserSubscriptions: React.FC = () => {
 
     const handleSubscribe = async (plan: any) => {
         try {
-            dispatch(showToast({ message: 'Initializing payment...', type: 'info' }));
+            dispatch(showToast({ message: 'Processing subscription...', type: 'info' }));
 
-            // 1. Process Payment
-            const response = await paymentsService.processPayment({
-                amount: plan.price,
-                currency: 'INR',
-                entityType: 'Subscription',
-                entityId: plan.id || plan._id,
-                idempotencyKey: crypto.randomUUID(),
-                phoneNumber: user?.phoneNumber || '9999999999'
+            // Direct subscription without payment gateway
+            await subscriptionsService.subscribe({
+                planId: plan.id || plan._id,
+                useFreeTrial: true,
+                paymentMethodId: "pm_card_visa", // Keep as fallback
+                userPhone: user?.phoneNumber || "9999999999"
             });
 
-            console.log('Payment initialized:', response);
+            dispatch(showToast({ message: 'Subscription activated successfully!', type: 'success' }));
 
-            const data = (response as any).data || response;
+            // Refresh data
+            await fetchData();
 
-            if (data.redirectUrl) {
-                // Redirect to payment gateway
-                window.location.href = data.redirectUrl;
-            } else if (data.status === 'SUCCESS' || data.status === 'COMPLETED') {
-                dispatch(showToast({ message: 'Subscription activated!', type: 'success' }));
-                fetchData();
-            } else {
-                dispatch(showToast({ message: 'Payment initiated but status is pending.', type: 'warning' }));
-            }
+            // Update Global Redux State to unlock features immediately
+            dispatch(updateUserSubscription({
+                subscriptionStatus: 'active',
+                subscriptionPlan: plan.name || 'Pro',
+                // We could also parse the expiry date from the response if we had it, but status is key
+            }));
 
         } catch (e) {
             console.error('Subscription error:', e);
-            dispatch(showToast({ message: 'Subscription payment failed', type: 'error' }));
+            dispatch(showToast({ message: 'Failed to activate subscription. Please try again.', type: 'error' }));
         }
     };
 

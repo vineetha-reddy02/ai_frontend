@@ -9,6 +9,7 @@ import UserWallet from './UserWallet';
 import UserSubscriptions from './UserSubscriptions';
 import UserReferrals from './UserReferrals';
 import UserCoupons from './UserCoupons';
+import { subscriptionsService } from '../../services/subscriptions';
 
 type ProfileTabType = 'profile' | 'wallet' | 'subscriptions' | 'referrals' | 'coupons';
 
@@ -20,6 +21,7 @@ const UserProfile: React.FC = () => {
     const [activeTab, setActiveTab] = useState<ProfileTabType>(tabParam || 'profile');
 
     const [profile, setProfile] = useState<any>(null);
+    const [currentSubscription, setCurrentSubscription] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -55,6 +57,23 @@ const UserProfile: React.FC = () => {
                 email: data.email || '',
                 phone: data.phoneNumber || ''
             });
+
+            // Fetch Subscription (Handle 404/Empty safely)
+            try {
+                const subRes = await subscriptionsService.current();
+                const subData = (subRes as any)?.data || subRes;
+
+                // Only set if we have valid data, otherwise null implues Free Plan
+                if (subData && (subData.status || subData.planId)) {
+                    setCurrentSubscription(subData);
+                } else {
+                    setCurrentSubscription(null);
+                }
+            } catch (e) {
+                console.log('No active subscription found (User is likely on Free Plan):', e);
+                setCurrentSubscription(null);
+            }
+
         } catch (error) {
             console.error('Failed to load profile:', error);
         } finally {
@@ -145,6 +164,41 @@ const UserProfile: React.FC = () => {
                                 </span>
                             )}
                         </div>
+                    </div>
+                </div>
+
+                {/* Subscription Card */}
+                <div className={`rounded-xl p-8 shadow-lg text-white mb-8 transition-all ${currentSubscription
+                        ? 'bg-gradient-to-r from-indigo-500 to-purple-600'
+                        : 'bg-gradient-to-r from-slate-600 to-slate-700 dark:from-slate-800 dark:to-slate-900 border border-slate-500/30'
+                    }`}>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="text-xl font-bold mb-2">Current Subscription</h3>
+                            <p className="text-white/90 mb-4 text-xs font-semibold uppercase tracking-wider">
+                                {currentSubscription?.plan?.name || currentSubscription?.planName || 'Free Plan'}
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <div className={`px-3 py-1 rounded-full text-xs font-bold ${currentSubscription?.status === 'active' || currentSubscription?.status === 'Trialing'
+                                        ? 'bg-green-400/30 text-green-100'
+                                        : !currentSubscription ? 'bg-blue-400/30 text-blue-100' : 'bg-red-400/30 text-red-100'
+                                    }`}>
+                                    {currentSubscription?.status === 'active' || currentSubscription?.status === 'Trialing' ? 'ACTIVE' : !currentSubscription ? 'ACTIVE' : 'EXPIRED'}
+                                </div>
+                                {currentSubscription && (
+                                    <span className="text-sm text-white/80">
+                                        Renews on {new Date(currentSubscription.renewalDate || currentSubscription.endDate || Date.now()).toLocaleDateString()}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <Button
+                            variant="outline"
+                            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                            onClick={() => handleTabChange('subscriptions')}
+                        >
+                            {currentSubscription ? 'Manage Plan' : 'Upgrade to Pro'}
+                        </Button>
                     </div>
                 </div>
 

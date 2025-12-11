@@ -20,6 +20,7 @@ import UserSubscriptions from './UserSubscriptions';
 import UserReferrals from './UserReferrals';
 import UserProfile from './UserProfile';
 import UpgradeModal from '../../components/UpgradeModal';
+import SubscriptionLock from '../../components/SubscriptionLock';
 import DashboardCarousel from '../../components/DashboardCourosel';
 import { useUsageLimits } from '../../hooks/useUsageLimits';
 
@@ -95,6 +96,17 @@ const DashboardPage: React.FC = () => {
     ];
 
     const renderContent = () => {
+        // Check if access should be restricted
+        const isRestricted = !isTrialActive && !hasActiveSubscription;
+
+        if (isRestricted) {
+            return (
+                <SubscriptionLock
+                    description="Your free trial has ended. Please upgrade to a subscription plan to continue accessing Voice Calls, Topics, Quizzes, and Pronunciation features."
+                />
+            );
+        }
+
         switch (activeTab) {
             case 'topics':
                 return <UserTopicBrowser />;
