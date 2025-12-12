@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { useDispatch } from 'react-redux';
 import Button from '../../components/Button';
 import { authService } from '../../services/auth';
-import { setAuthData, setError } from '../../store/authSlice';
+import { usersService } from '../../services/users';
+import { subscriptionsService } from '../../services/subscriptions';
+import { setAuthData, setError, updateUserSubscription } from '../../store/authSlice';
 import { showToast } from '../../store/uiSlice';
 import { AppDispatch } from '../../store';
 
@@ -73,7 +75,48 @@ const LoginPage: React.FC = () => {
           finalUser.role = 'admin';
         }
 
+        // 1. Set initial auth data (token is crucial for subsequent requests)
         dispatch(setAuthData({ user: finalUser, token }));
+
+        // 2. Fetch full profile and subscription to ensure we have the latest status
+        // This prevents the "Trial Expired" flash by ensuring Redux has the "Yearly" plan data immediately
+        try {
+          const profileRes = await usersService.getProfile();
+          const profileData = (profileRes as any)?.data || profileRes;
+
+          let subData = null;
+          try {
+            const subRes = await subscriptionsService.current();
+            subData = (subRes as any)?.data || subRes;
+          } catch (e) { console.log('No active sub on login'); }
+
+          // 3. Dispatch merged updates
+          if (profileData) {
+            // Re-dispatch setAuthData or setUser with the richer profile
+            dispatch(setAuthData({
+              user: {
+                ...finalUser,
+                ...profileData,
+                subscriptionStatus: profileData.subscriptionStatus || profileData.subscription?.status,
+                subscriptionPlan: profileData.subscriptionPlan || profileData.subscription?.planName || profileData.subscription?.plan?.name,
+              },
+              token
+            }));
+          }
+
+          if (subData) {
+            dispatch(updateUserSubscription({
+              subscriptionStatus: subData.status,
+              subscriptionPlan: subData.plan?.name || subData.planName,
+              trialEndDate: subData.endDate || subData.renewalDate
+            }));
+          }
+
+        } catch (fetchError) {
+          console.error('Failed to fetch rich profile data on login', fetchError);
+          // Non-blocking: we still have the basic user from login response, so we proceed
+        }
+
         dispatch(
           showToast({
             message: 'Login successful! Welcome back.',

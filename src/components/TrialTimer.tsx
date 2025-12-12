@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 
 interface TrialTimerProps {
     trialExpiresAt: string | null;
@@ -14,6 +16,7 @@ const TrialTimer: React.FC<TrialTimerProps> = ({
     onUpgrade
 }) => {
     const navigate = useNavigate();
+    const { isLoading } = useSelector((state: RootState) => state.auth);
     const [timeRemaining, setTimeRemaining] = useState<string>('');
     const [isExpired, setIsExpired] = useState(false);
 
@@ -52,6 +55,10 @@ const TrialTimer: React.FC<TrialTimerProps> = ({
 
     if (hasActiveSubscription) {
         return null; // Don't show timer for subscribed users
+    }
+
+    if (isLoading) {
+        return null; // Don't show timer while checking subscription status
     }
 
     if (!trialExpiresAt) {

@@ -1,6 +1,9 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { usersService } from './services/users';
+import { subscriptionsService } from './services/subscriptions';
+import { setUser, updateUserSubscription } from './store/authSlice';
 import LandingPage from './pages/common/LandingPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -158,6 +161,51 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [theme]);
+
+  // Sync profile data on mount to ensure subscription status is fresh
+  useEffect(() => {
+    const syncProfile = async () => {
+      // Only run if we have a user (logged in or hydrated from localStorage)
+      if (user?.id) {
+        try {
+          // Fetch latest profile
+          const res = await usersService.getProfile();
+          const profileData = (res as any)?.data || res;
+
+          // Fetch latest subscription (if any) to ensure we have the plan details
+          let subData = null;
+          try {
+            const subRes = await subscriptionsService.current();
+            subData = (subRes as any)?.data || subRes;
+          } catch (e) {
+            // It's inconsistent to have a paid plan but 404 on current subscription, 
+            // but handle gracefully safely
+            console.log('[App] No active subscription found during sync');
+          }
+
+          // Dispatch updates to Redux
+          dispatch(setUser({
+            ...profileData,
+            // Ensure subscription fields are preserved/merged if they exist in profile
+            subscriptionStatus: profileData.subscriptionStatus || profileData.subscription?.status,
+            subscriptionPlan: profileData.subscriptionPlan || profileData.subscription?.planName || profileData.subscription?.plan?.name,
+          }));
+
+          if (subData) {
+            dispatch(updateUserSubscription({
+              subscriptionStatus: subData.status,
+              subscriptionPlan: subData.plan?.name || subData.planName,
+              trialEndDate: subData.endDate || subData.renewalDate
+            }));
+          }
+        } catch (error) {
+          console.error("[App] Failed to sync profile on load", error);
+        }
+      }
+    };
+
+    syncProfile();
+  }, [dispatch, user?.id]); // Run when user ID changes (login) or on mount if already logged in
 
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
