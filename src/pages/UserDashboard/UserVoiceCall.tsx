@@ -69,6 +69,7 @@ const UserVoiceCall: React.FC = () => {
     const {
         hasActiveSubscription,
         isTrialActive,
+        isFreeTrial, // Add this
         voiceCallRemainingSeconds,
         hasVoiceCallTimeRemaining,
         voiceCallLimitSeconds,
@@ -188,15 +189,20 @@ const UserVoiceCall: React.FC = () => {
             return;
         }
 
-        // Check session time limit
-        if (!hasVoiceCallTimeRemaining) {
+        // Check session time limit (only if not unlimited)
+        if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) {
             callLogger.warning('Call blocked: No remaining call time');
-            dispatch(showToast({ message: 'Session limit reached. Please try again later.', type: 'warning' }));
+            triggerUpgradeModal();
+            // dispatch(showToast({ message: 'Daily limit reached. Upgrade to Pro for unlimited calls!', type: 'warning' }));
             return;
         }
 
         callLogger.info('✅ Subscription and time checks passed, initiating call');
         callLogger.debug('User ID being sent as calleeId:', userId);
+
+        // Debug payload
+        const payload = { calleeId: userId };
+        callLogger.debug('Sending payload to backend:', JSON.stringify(payload));
 
         // Use the new hook to initiate the call
         const result = await initiateCall(userId);
@@ -207,9 +213,23 @@ const UserVoiceCall: React.FC = () => {
             });
             dispatch(showToast({ message: 'Calling...', type: 'info' }));
         } else {
-            callLogger.error('❌ Failed to initiate call from UserVoiceCall', result.error);
+            // Extract detailed error message
+            const apiError = result.error as any;
+            const errorMessage = apiError?.response?.data?.message ||
+                apiError?.response?.data?.elements?.[0]?.errorMessage || // Common validation error structure
+                apiError?.message ||
+                'Failed to initiate call';
+
+            const validationErrors = apiError?.response?.data?.errors; // standard .NET validation errors
+
+            callLogger.error('❌ Failed to initiate call from UserVoiceCall', {
+                error: apiError,
+                message: errorMessage,
+                validationErrors
+            });
+
             dispatch(showToast({
-                message: result.error || 'Failed to initiate call',
+                message: errorMessage,
                 type: 'error'
             }));
         }
@@ -245,7 +265,7 @@ const UserVoiceCall: React.FC = () => {
                 <div className="flex items-center gap-4">
                     {/* Session Timer/Status */}
                     {activeTab === 'available' && (
-                        hasActiveSubscription ? (
+                        (hasActiveSubscription && !isFreeTrial) ? ( // Check for Paid Subscription (not just active)
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                                 <Clock className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                                 <span className="text-xs text-green-900 dark:text-green-200 whitespace-nowrap font-medium">
@@ -258,7 +278,7 @@ const UserVoiceCall: React.FC = () => {
                                 <span className="text-xs text-blue-900 dark:text-blue-200 whitespace-nowrap">
                                     5 min/day
                                 </span>
-                                <span className="text-xs font-mono text-green-600 dark:text-green-400">
+                                <span className={`text-xs font-mono font-bold ${!hasVoiceCallTimeRemaining ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
                                     {Math.floor(voiceCallRemainingSeconds / 60)}:{String(voiceCallRemainingSeconds % 60).padStart(2, '0')}
                                 </span>
                             </div>

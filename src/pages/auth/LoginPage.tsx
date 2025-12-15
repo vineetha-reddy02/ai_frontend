@@ -92,6 +92,38 @@ const LoginPage: React.FC = () => {
             subData = (subRes as any)?.data || subRes;
           } catch (e) { console.log('No active sub on login'); }
 
+          // Auto-subscribe to Free Trial if no active subscription
+          if (!subData || !subData.status || subData.status === 'none') {
+            try {
+              console.log('Auto-subscribing new user to Free Trial...');
+              const subscribeRes = await subscriptionsService.subscribe({
+                planId: 'plan_free_trial'
+              });
+              const newSub = (subscribeRes as any)?.data || subscribeRes;
+
+              if (newSub) {
+                console.log('Auto-subscription successful:', newSub);
+                subData = {
+                  ...newSub,
+                  plan: { name: 'Free Trial' },
+                  planName: 'Free Trial',
+                  status: 'Active' // Assume active after successful subscribe
+                };
+
+                // Update profileData to reflect the new subscription
+                if (profileData) {
+                  if (!profileData.subscription) profileData.subscription = {};
+                  profileData.subscription.status = 'Active';
+                  profileData.subscription.planName = 'Free Trial';
+                  profileData.subscription.renewalDate = newSub.renewalDate;
+                  profileData.subscription.isFreeTrial = true;
+                }
+              }
+            } catch (autoSubError) {
+              console.error('Failed to auto-subscribe to Free Trial:', autoSubError);
+            }
+          }
+
           // 3. Dispatch merged updates
           if (profileData) {
             // Re-dispatch setAuthData or setUser with the richer profile
@@ -101,6 +133,7 @@ const LoginPage: React.FC = () => {
                 ...profileData,
                 subscriptionStatus: profileData.subscriptionStatus || profileData.subscription?.status,
                 subscriptionPlan: profileData.subscriptionPlan || profileData.subscription?.planName || profileData.subscription?.plan?.name,
+                trialEndDate: profileData.subscription?.renewalDate // Store renewalDate as trialEndDate for timer
               },
               token
             }));
@@ -110,7 +143,7 @@ const LoginPage: React.FC = () => {
             dispatch(updateUserSubscription({
               subscriptionStatus: subData.status,
               subscriptionPlan: subData.plan?.name || subData.planName,
-              trialEndDate: subData.endDate || subData.renewalDate
+              trialEndDate: subData.renewalDate || subData.endDate
             }));
           }
 

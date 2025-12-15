@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
     Phone,
     BookOpen,
@@ -28,6 +28,7 @@ type TabType = 'voice' | 'topics' | 'quizzes' | 'pronunciation' | 'wallet' | 'su
 
 const DashboardPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     const tabParam = searchParams.get('tab') as TabType;
     const [activeTab, setActiveTab] = useState<TabType>(tabParam || 'topics');
     const {
@@ -96,17 +97,6 @@ const DashboardPage: React.FC = () => {
     ];
 
     const renderContent = () => {
-        // Check if access should be restricted
-        const isRestricted = !isTrialActive && !hasActiveSubscription;
-
-        if (isRestricted) {
-            return (
-                <SubscriptionLock
-                    description="Your free trial has ended. Please upgrade to a subscription plan to continue accessing Voice Calls, Topics, Quizzes, and Pronunciation features."
-                />
-            );
-        }
-
         switch (activeTab) {
             case 'topics':
                 return <UserTopicBrowser />;
@@ -121,9 +111,11 @@ const DashboardPage: React.FC = () => {
         }
     };
 
+    const { isContentLocked, isExplicitlyCancelled } = useUsageLimits();
+
     return (
         <UserLayout>
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto relative">
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
@@ -160,9 +152,51 @@ const DashboardPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Content Area */}
-                <div className="transition-opacity duration-200">
-                    {renderContent()}
+                {/* Content Area - VISIBLY LOCKED IF EXPIRED */}
+                <div className="relative min-h-[50vh]">
+                    {/* Lock Overlay - Smaller Popup, Transparent Background */}
+                    {isContentLocked && (
+                        <div
+                            className="absolute inset-0 z-50 flex items-center justify-center cursor-not-allowed"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                triggerUpgradeModal();
+                            }}
+                        >
+                            {/* Smaller, centered "Toast-like" card */}
+                            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-red-200 dark:border-red-900 flex flex-col items-center max-w-sm mx-4 animate-in fade-in zoom-in duration-300">
+                                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-3 text-red-600 dark:text-red-400">
+                                    <Wallet size={24} />
+                                </div>
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                                    {isExplicitlyCancelled ? 'No Active Plan' : 'Trial Expired'}
+                                </h3>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 text-center mb-4 leading-relaxed">
+                                    {isExplicitlyCancelled
+                                        ? "You don't have any active plan."
+                                        : "Your free trial has ended."}
+                                    <br />
+                                    Please subscribe to unlock content.
+                                </p>
+                                <button
+                                    className="px-5 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all w-full"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate('/subscriptions');
+                                    }}
+                                >
+                                    Choose Plan
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Content is rendered but interactions prevented if locked */}
+                    {/* Added select-none and pointer-events-none to prevent interaction */}
+                    {/* Added slight blur and grayscale to indicate specific "disabled" state without hiding content */}
+                    <div className={`transition-all duration-300 ${isContentLocked ? 'opacity-60 blur-[2px] pointer-events-none select-none grayscale-[0.3]' : ''}`}>
+                        {renderContent()}
+                    </div>
                 </div>
             </div>
         </UserLayout>

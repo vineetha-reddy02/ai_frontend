@@ -23,8 +23,6 @@ const loadUsageData = (): UsageData => {
 
     // Return default state
     return {
-        trialActivatedAt: null,
-        trialExpiresAt: null,
         voiceCallUsedSeconds: 0,
         voiceCallLimitSeconds: VOICE_CALL_LIMIT_SECONDS,
         lastResetDate: getTodayDateString(),
@@ -37,19 +35,6 @@ export const usageSlice = createSlice({
     name: 'usage',
     initialState,
     reducers: {
-        // Activate trial period (called on user registration or first login)
-        activateTrial: (state) => {
-            if (!state.trialActivatedAt) {
-                const now = new Date();
-                // 8 minutes trial
-                const expiresAt = new Date(now.getTime() + 8 * 60 * 1000);
-
-                state.trialActivatedAt = now.toISOString();
-                state.trialExpiresAt = expiresAt.toISOString();
-                localStorage.setItem('usageData', JSON.stringify(state));
-            }
-        },
-
         // Increment voice call usage by seconds
         incrementVoiceCallUsage: (state, action: PayloadAction<number>) => {
             state.voiceCallUsedSeconds = Math.min(
@@ -85,7 +70,6 @@ export const usageSlice = createSlice({
 });
 
 export const {
-    activateTrial,
     incrementVoiceCallUsage,
     resetVoiceCallSession,
     resetDailyUsage,
@@ -93,3 +77,4 @@ export const {
 } = usageSlice.actions;
 
 export default usageSlice.reducer;
+

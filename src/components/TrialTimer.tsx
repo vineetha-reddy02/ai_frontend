@@ -7,12 +7,14 @@ import { RootState } from '../store';
 interface TrialTimerProps {
     trialExpiresAt: string | null;
     hasActiveSubscription: boolean;
+    isFreeTrial?: boolean;
     onUpgrade?: () => void;
 }
 
 const TrialTimer: React.FC<TrialTimerProps> = ({
     trialExpiresAt,
     hasActiveSubscription,
+    isFreeTrial,
     onUpgrade
 }) => {
     const navigate = useNavigate();
@@ -21,7 +23,8 @@ const TrialTimer: React.FC<TrialTimerProps> = ({
     const [isExpired, setIsExpired] = useState(false);
 
     useEffect(() => {
-        if (hasActiveSubscription || !trialExpiresAt) {
+        // Stop if no expiration date, or if user is subscribed but NOT on a free trial
+        if (!trialExpiresAt || (hasActiveSubscription && !isFreeTrial)) {
             return;
         }
 
@@ -51,10 +54,10 @@ const TrialTimer: React.FC<TrialTimerProps> = ({
         const interval = setInterval(calculateTimeRemaining, 1000);
 
         return () => clearInterval(interval);
-    }, [trialExpiresAt, hasActiveSubscription]);
+    }, [trialExpiresAt, hasActiveSubscription, isFreeTrial]);
 
-    if (hasActiveSubscription) {
-        return null; // Don't show timer for subscribed users
+    if (hasActiveSubscription && !isFreeTrial) {
+        return null; // Don't show timer for PAID subscribed users (show for free trial)
     }
 
     if (isLoading) {
@@ -73,7 +76,7 @@ const TrialTimer: React.FC<TrialTimerProps> = ({
             <Clock className="w-4 h-4 text-red-600 dark:text-red-400" />
             <div className="flex flex-col">
                 <span className="text-xs font-medium text-red-900 dark:text-red-200">
-                    {isExpired ? 'Trial Expired' : '20-Minute Free Trial'}
+                    {isExpired ? 'Trial Expired' : `Free Trial: Expires ${new Date(trialExpiresAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`}
                 </span>
                 <span className="text-xs tabular-nums text-red-700 dark:text-red-300">
                     {isExpired ? (

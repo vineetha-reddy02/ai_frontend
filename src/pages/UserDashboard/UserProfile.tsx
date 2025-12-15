@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { User, Mail, Phone, Save, Camera, Wallet, CreditCard, Users, Ticket, ArrowLeft } from 'lucide-react';
 import Button from '../../components/Button';
 import { usersService } from '../../services/users';
@@ -17,6 +17,7 @@ type ProfileTabType = 'profile' | 'wallet' | 'subscriptions' | 'referrals' | 'co
 
 const UserProfile: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const dispatch = useDispatch();
     const { user } = useSelector((state: RootState) => state.auth);
     const [searchParams, setSearchParams] = useSearchParams();
@@ -62,13 +63,12 @@ const UserProfile: React.FC = () => {
             });
 
             // Dispatch updates to Redux immediately after fetch
-            // IMPORTANT: Merge with existing user to preserve role and id
             if (user) {
                 dispatch(setUser({
                     ...user,
-                    ...data, // Profile data
+                    ...data,
                     id: user.id || data.userId,
-                    role: user.role, // Preserve role
+                    role: user.role,
                     avatar: data.avatarUrl || user.avatar,
                     subscriptionStatus: data.subscriptionStatus || data.subscription?.status || user.subscriptionStatus,
                     subscriptionPlan: data.subscriptionPlan || data.subscription?.planName || data.subscription?.plan?.name || user.subscriptionPlan,
@@ -76,25 +76,54 @@ const UserProfile: React.FC = () => {
             }
 
             // Fetch Subscription (Handle 404/Empty safely)
-            try {
-                const subRes = await subscriptionsService.current();
-                const subData = (subRes as any)?.data || subRes;
+            // If justSubscribed is true, poll aggressively
+            const isJustSubscribed = (window.history.state?.usr?.justSubscribed) || (location.state as any)?.justSubscribed;
 
-                // Only set if we have valid data, otherwise null implues Free Plan
-                if (subData && (subData.status || subData.planId)) {
-                    setCurrentSubscription(subData);
-                    // Dispatch subscription update immediately
-                    dispatch(updateUserSubscription({
-                        subscriptionStatus: subData.status,
-                        subscriptionPlan: subData.plan?.name || subData.planName,
-                        trialEndDate: subData.endDate || subData.renewalDate
-                    }));
-                } else {
-                    setCurrentSubscription(null);
+            let attempts = 0;
+            // If just subscribed, retry up to 10 times (10 seconds), otherwise just once
+            const maxAttempts = isJustSubscribed ? 10 : 1;
+            let subFound = false;
+
+            while (attempts < maxAttempts && !subFound) {
+                try {
+                    const subRes = await subscriptionsService.current();
+                    const subData = (subRes as any)?.data || subRes;
+
+                    // Only set if we have valid data
+                    if (subData && (subData.status || subData.planId)) {
+                        // If we are waiting for a NEW subscription, ensure it is actually active/trialing
+                        // before accepting it, to avoid picking up an old cancelled one if backend hasn't updated
+                        if (isJustSubscribed && !['active', 'trialing'].includes(subData.status?.toLowerCase())) {
+                            throw new Error("Subscription found but not active yet");
+                        }
+
+                        setCurrentSubscription(subData);
+                        subFound = true; // Exit loop
+
+                        // Dispatch subscription update immediately
+                        dispatch(updateUserSubscription({
+                            subscriptionStatus: subData.status,
+                            subscriptionPlan: subData.plan?.name || subData.planName,
+                            trialEndDate: subData.endDate || subData.renewalDate
+                        }));
+
+                        // Force update local profile state to match if needed
+                        if (isJustSubscribed) {
+                            dispatch(showToast({ message: "Subscription verified!", type: "success" }));
+                        }
+                    } else {
+                        setCurrentSubscription(null);
+                    }
+                } catch (e) {
+                    console.log(`Subscription fetch attempt ${attempts + 1} failed:`, e);
+                    if (attempts === maxAttempts - 1) {
+                        setCurrentSubscription(null);
+                    } else {
+                        // Wait 1 second before retry
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
                 }
-            } catch (e) {
-                console.log('No active subscription found (User is likely on Free Plan):', e);
-                setCurrentSubscription(null);
+                attempts++;
             }
 
         } catch (error) {
@@ -225,18 +254,20 @@ const UserProfile: React.FC = () => {
                         <div>
                             <h3 className="text-xl font-bold mb-2">Current Subscription</h3>
                             <p className="text-white/90 mb-4 text-xs font-semibold uppercase tracking-wider">
-                                {currentSubscription?.plan?.name || currentSubscription?.planName || 'Free Plan'}
+                                {currentSubscription?.plan?.name || currentSubscription?.planName || 'No Active Plan'}
                             </p>
                             <div className="flex items-center gap-2">
                                 <div className={`px-3 py-1 rounded-full text-xs font-bold ${currentSubscription?.status === 'active' || currentSubscription?.status === 'Trialing'
                                     ? 'bg-green-400/30 text-green-100'
-                                    : !currentSubscription ? 'bg-blue-400/30 text-blue-100' : 'bg-red-400/30 text-red-100'
+                                    : 'bg-red-400/30 text-red-100'
                                     }`}>
-                                    {currentSubscription?.status === 'active' || currentSubscription?.status === 'Trialing' ? 'ACTIVE' : !currentSubscription ? 'ACTIVE' : 'EXPIRED'}
+                                    {currentSubscription?.status === 'active' || currentSubscription?.status === 'Trialing'
+                                        ? 'ACTIVE'
+                                        : 'NO ACTIVE PLAN'}
                                 </div>
                                 {currentSubscription && (
                                     <span className="text-sm text-white/80">
-                                        Renews on {new Date(currentSubscription.renewalDate || currentSubscription.endDate || Date.now()).toLocaleDateString()}
+                                        {currentSubscription.status === 'active' ? 'Renews' : 'Expired'} on {new Date(currentSubscription.renewalDate || currentSubscription.endDate || Date.now()).toLocaleDateString()}
                                     </span>
                                 )}
                             </div>

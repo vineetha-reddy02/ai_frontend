@@ -1,7 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect, useState } from 'react';
 import type { RootState } from '../store';
-import { checkAndReset, activateTrial } from '../store/usageSlice';
+import { checkAndReset } from '../store/usageSlice';
 
 export const useUsageLimits = () => {
     const dispatch = useDispatch();
@@ -17,20 +17,21 @@ export const useUsageLimits = () => {
     // Check for active status or valid paid plan that isn't explicitly expired
     const isActiveStatus = status === 'active' || status === 'trialing' || status === 'succeeded';
     const isPaidPlan = ['basic', 'premium', 'yearly', 'pro'].some(p => plan.includes(p));
-    const isExplicitlyExpired = ['expired', 'cancelled', 'past_due'].includes(status);
 
-    const hasActiveSubscription = (user?.role === 'admin' || user?.role === 'instructor') ||
-        isActiveStatus ||
-        (isPaidPlan && !isExplicitlyExpired);
+    // STRICT: If status is explicitly cancelled, we treat it as revoked access immediately 
+    // (per user request: "if he cancels before 24hrs also it has to locked")
+    const isExplicitlyCancelled = status === 'cancelled' || status === 'expired' || status === 'past_due';
+
+    const hasActiveSubscription = (
+        (user?.role === 'admin' || user?.role === 'instructor') ||
+        (isActiveStatus && !isExplicitlyCancelled)
+    );
+
+    const isFreeTrial = plan.includes('free') || plan.includes('trial') || !!(user as any)?.subscription?.isFreeTrial;
 
     // Check and reset usage on mount and periodically
     useEffect(() => {
         dispatch(checkAndReset());
-
-        // Activate trial if user is logged in and trial not yet activated
-        if (user && !hasActiveSubscription && !usageData.trialActivatedAt) {
-            dispatch(activateTrial());
-        }
 
         // Check every minute for daily reset
         const interval = setInterval(() => {
@@ -38,27 +39,31 @@ export const useUsageLimits = () => {
         }, 60000);
 
         return () => clearInterval(interval);
-    }, [dispatch, user, hasActiveSubscription, usageData.trialActivatedAt]);
+    }, [dispatch]);
 
     // Trial validity check
     const isTrialActive = () => {
+        // If explicitly cancelled, trial is dead.
+        if (isExplicitlyCancelled) return false;
+
         if (hasActiveSubscription) return true;
 
-        if (!usageData.trialExpiresAt) return false;
+        if (!user?.trialEndDate) return false;
 
-        const expiresAt = new Date(usageData.trialExpiresAt);
+        const expiresAt = new Date(user.trialEndDate);
         return new Date() < expiresAt;
     };
 
     const trialRemainingTime = () => {
-        if (hasActiveSubscription) return 'Unlimited';
+        if (isExplicitlyCancelled) return 'Trial Cancelled';
+        if (hasActiveSubscription && !isFreeTrial) return 'Unlimited';
 
-        if (!usageData.trialExpiresAt) return 'Not activated';
+        if (!user?.trialEndDate) return 'Not activated';
 
-        const expiresAt = new Date(usageData.trialExpiresAt);
+        const expiresAt = new Date(user.trialEndDate);
         const now = new Date();
 
-        if (now >= expiresAt) return 'Expired';
+        if (now >= expiresAt) return 'Trial Expired';
 
         const diffMs = expiresAt.getTime() - now.getTime();
         const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -67,11 +72,14 @@ export const useUsageLimits = () => {
         return `${hours}h ${minutes}m`;
     };
 
-    // Voice Call limits (5 min per session)
-    const voiceCallRemainingSeconds = Math.max(
-        0,
-        usageData.voiceCallLimitSeconds - usageData.voiceCallUsedSeconds
-    );
+    // Voice Call limits
+    // Default to 5 mins (300s) for Free Trial, Unlimited (-1) for Paid
+    const voiceCallLimitSeconds = (isFreeTrial || !hasActiveSubscription) ? 300 : -1;
+
+    // Check remaining time
+    const voiceCallRemainingSeconds = voiceCallLimitSeconds === -1
+        ? 999999 // Effectively unlimited for UI display calculations
+        : Math.max(0, voiceCallLimitSeconds - usageData.voiceCallUsedSeconds);
 
     const hasVoiceCallTimeRemaining = voiceCallRemainingSeconds > 0;
 
@@ -84,19 +92,28 @@ export const useUsageLimits = () => {
         setShowUpgradeModal(false);
     };
 
+    // Combined "Locked" state for UI
+    // Locked if: No active subscription AND Trial is inactive (expired or cancelled)
+    const isContentLocked = !hasActiveSubscription && !isTrialActive();
+
     return {
         hasActiveSubscription,
+        isFreeTrial,
+        isExplicitlyCancelled,
 
         // Trial access
         isTrialActive: isTrialActive(),
         trialRemainingTime: trialRemainingTime(),
-        trialExpiresAt: usageData.trialExpiresAt,
+        trialExpiresAt: user?.trialEndDate || null,
+
+        // Access State
+        isContentLocked,
 
         // Voice call session limits
         voiceCallRemainingSeconds,
         hasVoiceCallTimeRemaining,
         voiceCallUsedSeconds: usageData.voiceCallUsedSeconds,
-        voiceCallLimitSeconds: usageData.voiceCallLimitSeconds,
+        voiceCallLimitSeconds: voiceCallLimitSeconds,
 
         // Upgrade modal
         showUpgradeModal,

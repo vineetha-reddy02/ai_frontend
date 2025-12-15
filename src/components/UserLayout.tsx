@@ -40,8 +40,11 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     const profileRef = useRef<HTMLDivElement | null>(null);
     const {
         hasActiveSubscription,
+        isFreeTrial,
         trialExpiresAt,
         triggerUpgradeModal,
+        isContentLocked,
+        isExplicitlyCancelled
     } = useUsageLimits();
 
     const handleLogout = async () => {
@@ -97,12 +100,29 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-4">
-                            {/* Trial Timer */}
-                            <TrialTimer
-                                trialExpiresAt={trialExpiresAt}
-                                hasActiveSubscription={hasActiveSubscription}
-                                onUpgrade={triggerUpgradeModal}
-                            />
+                            {/* Trial/Plan Status */}
+                            {isExplicitlyCancelled ? (
+                                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full animate-pulse">
+                                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                                    <span className="text-xs font-semibold text-red-700 dark:text-red-300">
+                                        No Active Plan
+                                    </span>
+                                </div>
+                            ) : isContentLocked && !hasActiveSubscription ? (
+                                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-full">
+                                    <div className="w-2 h-2 rounded-full bg-orange-500" />
+                                    <span className="text-xs font-semibold text-orange-700 dark:text-orange-300">
+                                        Plan Expired
+                                    </span>
+                                </div>
+                            ) : (
+                                <TrialTimer
+                                    trialExpiresAt={trialExpiresAt}
+                                    hasActiveSubscription={hasActiveSubscription}
+                                    isFreeTrial={isFreeTrial}
+                                    onUpgrade={triggerUpgradeModal}
+                                />
+                            )}
 
                             {/* Theme Toggle */}
                             <button

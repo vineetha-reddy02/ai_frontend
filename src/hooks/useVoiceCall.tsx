@@ -31,13 +31,15 @@ export const useVoiceCall = () => {
         try {
             callLogger.info('Initiating call', { calleeId, topicId, callerId: user?.id });
 
-            // Prepare payload - backend may require topicId field even if null
-            // User requested to force this topic ID for every initiate call
-            // Restoration: Backend throws 400 Validation Error if topicId is missing
+            // Prepare payload
             const payload: any = {
                 calleeId: calleeId,
-                topicId: '019aef84-40d2-748b-bca5-1b45b9581611'
             };
+
+            // Only add topicId if it exists
+            if (topicId) {
+                payload.topicId = topicId;
+            }
 
             // 1. Call API to initiate
             callLogger.apiCall('POST', '/calls/initiate', payload);
@@ -330,3 +332,4 @@ export const useVoiceCall = () => {
 };
 
 export default useVoiceCall;
+

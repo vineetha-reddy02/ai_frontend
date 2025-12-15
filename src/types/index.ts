@@ -267,6 +267,14 @@ export interface Subscription {
   status: 'active' | 'expired' | 'cancelled';
 }
 
+// Subscription Info Data Transfer Object
+export interface SubscriptionInfoDto {
+  planName: string | null;
+  status: string | null;
+  renewalDate: string | null;
+  isFreeTrial: boolean;
+}
+
 // Full user profile returned by GET /api/v1/users/profile
 export interface UserProfile {
   userId: string;
@@ -282,12 +290,7 @@ export interface UserProfile {
   city?: string;
   dateOfBirth?: string; // ISO
   age?: number;
-  subscription?: {
-    planName?: string;
-    status?: string;
-    renewalDate?: string;
-    isFreeTrial?: boolean;
-  };
+  subscription?: SubscriptionInfoDto;
   walletBalance?: number;
   referralCode?: string;
 }
@@ -322,8 +325,6 @@ export interface Paginated<T> {
 
 // Usage Tracking Types
 export interface UsageData {
-  trialActivatedAt: string | null; // ISO timestamp when trial started (user registration)
-  trialExpiresAt: string | null; // ISO timestamp when trial expires (24hrs after activation)
   voiceCallUsedSeconds: number; // seconds used in current session
   voiceCallLimitSeconds: number; // 300 seconds (5 minutes per session)
   lastResetDate: string; // ISO date string for daily reset tracking
