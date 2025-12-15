@@ -23,6 +23,7 @@ import TrialTimer from './TrialTimer';
 import { useUsageLimits } from '../hooks/useUsageLimits';
 import { LanguageSelector } from './common/LanguageSelector';
 import { Logo } from './common/Logo';
+import callsService from '../services/calls';
 
 interface UserLayoutProps {
     children: React.ReactNode;
@@ -43,7 +44,12 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         triggerUpgradeModal,
     } = useUsageLimits();
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await callsService.updateAvailability('Offline');
+        } catch (error) {
+            console.error('Failed to set status to Offline:', error);
+        }
         dispatch(logout());
         navigate('/');
     };

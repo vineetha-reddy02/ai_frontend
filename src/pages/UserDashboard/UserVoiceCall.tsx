@@ -6,15 +6,18 @@ import Button from '../../components/Button';
 import { useDispatch, useSelector } from 'react-redux';
 import { showToast } from '../../store/uiSlice';
 import { useUsageLimits } from '../../hooks/useUsageLimits';
+import { useVoiceCall } from '../../hooks/useVoiceCall';
 import VoiceCallTimer from '../../components/VoiceCallTimer';
 import UserStatusIndicator from '../../components/UserStatusIndicator';
 import OnlineStatusIndicator from '../../components/OnlineStatusIndicator';
 import { RootState } from '../../store';
+import { callLogger } from '../../utils/callLogger';
 
 const UserVoiceCall: React.FC = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { user: currentUser } = useSelector((state: RootState) => state.auth);
+    const { initiateCall } = useVoiceCall();
     const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
     const [availableUsers, setAvailableUsers] = useState<any[]>([]);
     const [userStatus, setUserStatus] = useState('online');
@@ -30,14 +33,98 @@ const UserVoiceCall: React.FC = () => {
         triggerUpgradeModal,
     } = useUsageLimits();
 
+    const fetchAvailableUsers = async (options?: { silent?: boolean }) => {
+        try {
+            if (!options?.silent) setLoading(true);
+            callLogger.debug('Fetching available users');
+
+            const res = await callsService.availableUsers({ limit: 1000 });
+
+            // ... (keep extracting logic same as before, no changes to logic) ... 
+
+            // Log the full response structure to understand what we're getting
+            if (!options?.silent) callLogger.debug('Available users API response:', res);
+
+            // Try multiple ways to extract the data
+            let items = [];
+
+            if (Array.isArray(res)) {
+                items = res;
+                if (!options?.silent) callLogger.debug('Data extracted: Direct array');
+            } else if ((res as any)?.data) {
+                items = Array.isArray((res as any).data) ? (res as any).data : [(res as any).data];
+                if (!options?.silent) callLogger.debug('Data extracted: From res.data');
+            } else if ((res as any)?.items) {
+                items = (res as any).items;
+                if (!options?.silent) callLogger.debug('Data extracted: From res.items');
+            } else {
+                items = [res];
+                if (!options?.silent) callLogger.debug('Data extracted: Wrapped response');
+            }
+
+            if (!options?.silent) {
+                callLogger.debug('Extracted items count:', items.length);
+                if (items.length > 0) {
+                    callLogger.debug('First user structure:', items[0]);
+                    callLogger.debug('First user keys:', Object.keys(items[0] || {}));
+                }
+            }
+
+            // Filter to show only online users and EXCLUDE current user
+            const onlineUsers = items.filter((user: any) => {
+                if (!user) return false;
+                // Exclude current user from list
+                if (user.userId === currentUser?.id || user.id === currentUser?.id) return false;
+
+                if (user.isOnline !== undefined) return user.isOnline;
+                if (user.status === 'online' || user.status === 'Online') return true;
+                if (user.availability === 'Online') return true;
+                return true;
+            });
+
+            if (!options?.silent) callLogger.info(`Found ${onlineUsers.length} available users out of ${items.length} total`);
+
+            setAvailableUsers(onlineUsers);
+            setLastUpdated(new Date());
+        } catch (error: any) {
+            callLogger.error('Failed to fetch available users', error);
+        } finally {
+            if (!options?.silent) setLoading(false);
+        }
+    };
+
+    const fetchHistory = async () => {
+        try {
+            setLoading(true);
+            callLogger.debug('Fetching call history');
+            const res = await callsService.history({ limit: 1000 });
+            const items = (res as any)?.data || (Array.isArray(res) ? res : (res as any)?.items) || [];
+            callLogger.info(`Found ${items.length} call history items`);
+            setHistory(items);
+        } catch (error) {
+            callLogger.error('Failed to fetch call history', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Poll for updates and maintain 'Online' status
     useEffect(() => {
         if (activeTab === 'available') {
-            fetchAvailableUsers();
+            fetchAvailableUsers(); // Initial load (shows loader)
 
-            // Auto-refresh every minute
+            let pollCount = 0;
             const interval = setInterval(() => {
-                fetchAvailableUsers();
-            }, 60000); // 60 seconds
+                pollCount++;
+                fetchAvailableUsers({ silent: true }); // Silent poll
+
+                // Every 6 polls (30 seconds), re-assert Online status (Heartbeat)
+                if (pollCount % 6 === 0) {
+                    callsService.updateAvailability('Online').catch(err =>
+                        callLogger.warning('Heartbeat failed', err)
+                    );
+                }
+            }, 5000);
 
             return () => clearInterval(interval);
         } else {
@@ -45,58 +132,15 @@ const UserVoiceCall: React.FC = () => {
         }
     }, [activeTab]);
 
-    // Set initial status to Online when visiting this page
-    useEffect(() => {
-        callsService.updateAvailability('Online').catch(console.error);
-        return () => {
-            // Optional: Set to offline on unmount if desired, but usually we keep them online 
-            // until they logout or disconnect.
-        };
-    }, []);
-
-    const fetchAvailableUsers = async () => {
-        try {
-            setLoading(true);
-            const res = await callsService.availableUsers();
-            const items = (res as any)?.data || (Array.isArray(res) ? res : (res as any)?.items) || [];
-
-            // Filter to show only online users
-            // Assuming the API returns users with an 'isOnline' or 'status' field
-            // If not available from API, we'll show all users but with status indicators
-            const onlineUsers = items.filter((user: any) => {
-                // Check various possible online status fields
-                if (user.isOnline !== undefined) return user.isOnline;
-                if (user.status === 'online' || user.status === 'Online') return true;
-                if (user.availability === 'Online') return true;
-                // If no status field, assume online (API should provide this)
-                return true;
-            });
-
-            setAvailableUsers(onlineUsers);
-            setLastUpdated(new Date());
-        } catch (error) {
-            console.error('Failed to fetch available users:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchHistory = async () => {
-        try {
-            setLoading(true);
-            const res = await callsService.history();
-            const items = (res as any)?.data || (Array.isArray(res) ? res : (res as any)?.items) || [];
-            setHistory(items);
-        } catch (error) {
-            console.error('Failed to fetch call history:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleInitiateCall = async (userId: string) => {
+        callLogger.info('🎯 User clicked Call button', {
+            targetUserId: userId,
+            currentUserId: currentUser?.id
+        });
+
         // Check if user has trial access or subscription
         if (!hasActiveSubscription && !isTrialActive) {
+            callLogger.warning('Call blocked: No active subscription or trial');
             triggerUpgradeModal();
             dispatch(showToast({ message: 'Trial expired. Upgrade to Pro for unlimited calls!', type: 'warning' }));
             return;
@@ -104,32 +148,28 @@ const UserVoiceCall: React.FC = () => {
 
         // Check session time limit
         if (!hasVoiceCallTimeRemaining) {
-            dispatch(showToast({ message: 'Session limit reached (5 min). Please end current call to start a new one.', type: 'warning' }));
+            callLogger.warning('Call blocked: No remaining call time');
+            dispatch(showToast({ message: 'Session limit reached. Please try again later.', type: 'warning' }));
             return;
         }
 
-        try {
-            dispatch(showToast({ message: 'Initiating call...', type: 'info' }));
-            // Pass topicId as null (casted) to satisfy backend if it expects a valid guid or null
-            const res = await callsService.initiate({ calleeId: userId, topicId: null as any });
-            // Assuming successful initiation redirects to call room or shows overlay
-            // For now, redirect to the main voice calls page which handles the room
-            navigate('/voice-calls');
-        } catch (error: any) {
-            console.error('Failed to initiate call:', error);
-            // Log detailed backend error
-            if (error.response) {
-                console.error('Backend Error Response:', error.response.data);
-                const backendMsg = error.response.data?.message || (typeof error.response.data === 'string' ? error.response.data : '');
-                const validationErrors = error.response.data?.errors ? JSON.stringify(error.response.data.errors) : '';
+        callLogger.info('✅ Subscription and time checks passed, initiating call');
+        callLogger.debug('User ID being sent as calleeId:', userId);
 
-                dispatch(showToast({
-                    message: `Failed: ${backendMsg} ${validationErrors}`.trim() || 'Failed to start call (400 Bad Request)',
-                    type: 'error'
-                }));
-            } else {
-                dispatch(showToast({ message: 'Failed to start call. User might be busy.', type: 'error' }));
-            }
+        // Use the new hook to initiate the call
+        const result = await initiateCall(userId);
+
+        if (result.success) {
+            callLogger.info('✅ Call initiated successfully from UserVoiceCall', {
+                callId: result.callId
+            });
+            dispatch(showToast({ message: 'Calling...', type: 'info' }));
+        } else {
+            callLogger.error('❌ Failed to initiate call from UserVoiceCall', result.error);
+            dispatch(showToast({
+                message: result.error || 'Failed to initiate call',
+                type: 'error'
+            }));
         }
     };
 
@@ -137,7 +177,9 @@ const UserVoiceCall: React.FC = () => {
         if (!lastActiveTime) return 'Just now';
 
         const now = new Date();
-        const lastActive = new Date(lastActiveTime);
+        // Ensure the date is treated as UTC if no timezone offset is provided
+        const timeStr = lastActiveTime.endsWith('Z') ? lastActiveTime : `${lastActiveTime}Z`;
+        const lastActive = new Date(timeStr);
         const diffMs = now.getTime() - lastActive.getTime();
         const diffMins = Math.floor(diffMs / 60000);
 
@@ -248,7 +290,7 @@ const UserVoiceCall: React.FC = () => {
                             <span className="text-xs text-slate-500">
                                 Updated: {lastUpdated.toLocaleTimeString()}
                             </span>
-                            <Button variant="ghost" size="sm" onClick={fetchAvailableUsers} leftIcon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}>
+                            <Button variant="ghost" size="sm" onClick={() => fetchAvailableUsers()} leftIcon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}>
                                 Refresh
                             </Button>
                         </div>

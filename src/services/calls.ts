@@ -2,8 +2,12 @@ import { apiService } from './api';
 
 export const callsService = {
   // Call Discovery & Matching
-  availableUsers: async (params?: Record<string, any>) =>
-    apiService.get('/calls/available-users', { params }),
+  availableUsers: async (params?: Record<string, any>) => {
+    console.log('[callsService] Calling /calls/available-users with params:', params);
+    const response = await apiService.get('/calls/available-users', { params });
+    console.log('[callsService] Available users response:', response);
+    return response;
+  },
 
   searchUsers: async (searchTerm: string, language?: string) =>
     apiService.get('/calls/search-users', { params: { searchTerm, language } }),
