@@ -153,7 +153,7 @@ const AdminProfilePage: React.FC = () => {
         try {
             setLoading(true);
             const updatePayload = {
-                fullName: editForm.fullName,
+                fullName: editForm.fullName || '',
                 bio: editForm.bio || '',
                 preferredLanguage: editForm.preferredLanguage || '',
                 country: editForm.country || '',
