@@ -23,8 +23,8 @@ const TrialTimer: React.FC<TrialTimerProps> = ({
     const [isExpired, setIsExpired] = useState(false);
 
     useEffect(() => {
-        // Stop if no expiration date, or if user is subscribed but NOT on a free trial
-        if (!trialExpiresAt || (hasActiveSubscription && !isFreeTrial)) {
+        // Don't show timer for paid subscribers (only show for free trial users)
+        if (!trialExpiresAt || hasActiveSubscription) {
             return;
         }
 
@@ -54,10 +54,11 @@ const TrialTimer: React.FC<TrialTimerProps> = ({
         const interval = setInterval(calculateTimeRemaining, 1000);
 
         return () => clearInterval(interval);
-    }, [trialExpiresAt, hasActiveSubscription, isFreeTrial]);
+    }, [trialExpiresAt, hasActiveSubscription]);
 
-    if (hasActiveSubscription && !isFreeTrial) {
-        return null; // Don't show timer for PAID subscribed users (show for free trial)
+    // Don't show timer for paid subscribers
+    if (hasActiveSubscription) {
+        return null;
     }
 
     if (isLoading) {

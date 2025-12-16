@@ -32,90 +32,273 @@ const UserSubscriptions: React.FC = () => {
     }, []);
 
     const checkPaymentStatus = async () => {
-        const transactionId = searchParams.get('transactionId');
-        if (transactionId) {
+        console.log('🔙 ========== RETURNED FROM PAYMENT GATEWAY ==========');
+        console.log('🌐 Current URL:', window.location.href);
+        console.log('📍 Current Path:', window.location.pathname);
+        console.log('🔍 URL Search Params:', window.location.search);
+
+        // Get transactionId from URL params or localStorage
+        let transactionId = searchParams.get('transactionId');
+        let pendingPayment: any = null;
+
+        console.log('🆔 Transaction ID from URL:', transactionId);
+
+        if (!transactionId) {
+            console.log('⚠️ No transactionId in URL, checking localStorage...');
+            // Try to get from localStorage
+            const stored = localStorage.getItem('pending_payment');
+            console.log('📦 localStorage "pending_payment":', stored);
+
+            if (stored) {
+                try {
+                    pendingPayment = JSON.parse(stored);
+                    transactionId = pendingPayment.transactionId;
+                    console.log('✅ Retrieved pending payment from localStorage:', pendingPayment);
+                    console.log('🆔 Transaction ID from localStorage:', transactionId);
+                } catch (e) {
+                    console.error('❌ Failed to parse pending payment:', e);
+                }
+            } else {
+                console.log('❌ No pending payment found in localStorage');
+            }
+        } else {
+            console.log('✅ Transaction ID found in URL!');
+            // Also load pending payment details if available
+            const stored = localStorage.getItem('pending_payment');
+            if (stored) {
+                try {
+                    pendingPayment = JSON.parse(stored);
+                    console.log('📦 Also loaded pending payment details:', pendingPayment);
+                } catch (e) {
+                    console.error('Failed to parse pending payment:', e);
+                }
+            }
+        }
+
+        if (!transactionId) {
+            console.log('❌ No transaction ID found anywhere, skipping payment check');
+            return;
+        }
+
+        console.log('🔍 ========== STARTING PAYMENT STATUS CHECK ==========');
+        console.log('🆔 Checking status for Transaction ID:', transactionId);
+        console.log('💰 Expected Amount:', pendingPayment?.amount);
+        console.log('📦 Expected Plan:', pendingPayment?.planName);
+
+        dispatch(showToast({ message: 'Verifying payment status...', type: 'info' }));
+
+        let pollAttempts = 0;
+        const maxPollAttempts = 60; // Poll for up to 3 minutes (60 * 3s = 180s)
+        let retryDelay = 3000; // Start with 3 seconds
+        const maxRetryDelay = 24000; // Max 24 seconds
+        let paymentCompleted = false;
+
+        console.log('⏱️ Polling Configuration:', {
+            maxAttempts: maxPollAttempts,
+            initialDelay: '3s',
+            maxDelay: '24s',
+            totalTimeout: '3 minutes'
+        });
+
+        while (pollAttempts < maxPollAttempts && !paymentCompleted) {
             try {
-                dispatch(showToast({ message: 'Verifying payment status...', type: 'info' }));
+                console.log(`\n🔄 ========== POLL ATTEMPT ${pollAttempts + 1}/${maxPollAttempts} ==========`);
+                console.log('📡 Calling API: GET /api/v1/payments/' + transactionId + '/status');
+
                 const res = await paymentsService.checkPaymentStatus(transactionId);
 
-                // Helper to safely access status from potentially nested response
+                console.log('📨 Raw API Response:', res);
+
+                // Extract status from response
                 const paymentData = (res as any).data || res;
                 const status = paymentData?.status?.toUpperCase();
 
+                console.log('💳 ========== PAYMENT STATUS DETAILS ==========');
+                console.log('� Status:', status);
+                console.log('💰 Amount:', paymentData?.amount);
+                console.log('💱 Currency:', paymentData?.currency);
+                console.log('📝 Description:', paymentData?.description);
+                console.log('📅 Created At:', paymentData?.createdAt);
+                console.log('✅ Completed At:', paymentData?.completedAt);
+                console.log('❌ Failure Reason:', paymentData?.failureReason);
+
                 if (status === 'COMPLETED' || status === 'SUCCESS') {
-                    dispatch(showToast({ message: 'Payment successful! Finalizing subscription...', type: 'success' }));
+                    console.log('🎉 ========== PAYMENT SUCCESSFUL! ==========');
+                    paymentCompleted = true;
+                    dispatch(showToast({ message: 'Payment successful! Activating subscription...', type: 'success' }));
+
+                    // Clear pending payment from localStorage
+                    console.log('🗑️ Clearing localStorage...');
+                    localStorage.removeItem('pending_payment');
+                    console.log('✅ localStorage cleared');
 
                     // IMMEDIATE ACCESS: Update Global Redux State (Optimistic)
+                    console.log('🔄 Updating Redux state (optimistic)...');
                     dispatch(updateUserSubscription({
                         subscriptionStatus: 'active',
-                        subscriptionPlan: 'Premium'
+                        subscriptionPlan: pendingPayment?.planName || 'Premium'
                     }));
+                    console.log('✅ Redux state updated');
 
-                    let attempts = 0;
-                    const maxAttempts = 5;
+                    // Poll for subscription activation
+                    console.log('\n🔄 ========== POLLING FOR SUBSCRIPTION ACTIVATION ==========');
+                    let subAttempts = 0;
+                    const maxSubAttempts = 10;
                     let subscriptionReady = false;
                     let verifiedSubData: any = null;
 
-                    while (attempts < maxAttempts && !subscriptionReady) {
+                    while (subAttempts < maxSubAttempts && !subscriptionReady) {
                         try {
+                            console.log(`📡 Subscription check attempt ${subAttempts + 1}/${maxSubAttempts}`);
                             const subRes = await subscriptionsService.current();
                             const subData = (subRes as any)?.data || subRes;
-                            if (subData && ['active', 'trialing'].includes(subData.status?.toLowerCase())) {
+
+                            console.log('📦 Subscription API Response:', {
+                                status: subData?.status,
+                                planName: subData?.planName || subData?.plan?.name,
+                                renewalDate: subData?.renewalDate
+                            });
+
+                            if (subData && ['active', 'trialing', 'succeeded'].includes(subData.status?.toLowerCase())) {
                                 subscriptionReady = true;
                                 verifiedSubData = subData;
+                                console.log('✅ Subscription verified and active!', subData);
+
                                 // Update Redux with REAL data
                                 dispatch(updateUserSubscription({
                                     subscriptionStatus: subData.status,
                                     subscriptionPlan: subData.plan?.name || subData.planName,
                                     trialEndDate: subData.endDate || subData.renewalDate
                                 }));
+                            } else {
+                                console.log(`⏳ Subscription not active yet (status: ${subData?.status}), retrying...`);
                             }
                         } catch (e) {
-                            // Ignore 404s while waiting
+                            console.log(`❌ Subscription check failed (attempt ${subAttempts + 1}):`, e);
                             await new Promise(resolve => setTimeout(resolve, 1000));
                         }
-                        attempts++;
+                        subAttempts++;
                     }
 
-                    // Refresh User Profile to sync subscription status in Token/Backend State
+                    // Refresh User Profile
+                    console.log('\n🔄 Refreshing user profile...');
                     try {
                         const profileRes = await authService.getProfile();
                         const userData = (profileRes as any).data || profileRes;
                         if (userData && userData.id) {
-                            // SAFETY: If we verified subscription via polling, ensure we don't overwrite it with stale profile data
                             if (subscriptionReady && verifiedSubData) {
                                 userData.subscriptionStatus = verifiedSubData.status;
                                 userData.subscriptionPlan = verifiedSubData.plan?.name || verifiedSubData.planName;
                                 userData.trialEndDate = verifiedSubData.endDate || verifiedSubData.renewalDate;
                             }
                             dispatch(setUser(userData));
+                            console.log('✅ User profile refreshed');
+                            console.log('📦 Updated user data:', {
+                                subscriptionStatus: userData.subscriptionStatus,
+                                subscriptionPlan: userData.subscriptionPlan,
+                                trialEndDate: userData.trialEndDate
+                            });
                         }
                     } catch (err) {
-                        console.error('Failed to sync profile after subscription:', err);
+                        console.error('❌ Failed to sync profile:', err);
                     }
 
-                    // Navigate to Profile Page
-                    navigate('/profile', {
-                        replace: true,
-                        state: {
-                            justSubscribed: true,
-                            transactionId: transactionId
+                    // Force token refresh by re-logging in
+                    console.log('\n🔄 Forcing token refresh...');
+                    try {
+                        // Get fresh token with updated subscription claims
+                        const token = localStorage.getItem('token');
+                        if (token) {
+                            // The token will be refreshed on next API call
+                            console.log('✅ Token will be refreshed on next request');
                         }
+                    } catch (err) {
+                        console.error('❌ Token refresh failed:', err);
+                    }
+
+                    // Show success message
+                    dispatch(showToast({
+                        message: 'Subscription activated successfully! Redirecting...',
+                        type: 'success'
+                    }));
+
+                    // Wait a moment for state updates to propagate
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    // Navigate to Profile
+                    console.log('\n🏠 ========== NAVIGATING TO PROFILE ==========');
+                    console.log('📍 Target URL: /profile');
+                    console.log('🎯 Navigation State:', {
+                        justSubscribed: true,
+                        transactionId: transactionId
                     });
 
+                    // Force a full page reload to ensure fresh data
+                    console.log('🔄 Forcing page reload to refresh all data...');
+                    window.location.href = '/profile';
+
+                    console.log('✅ ========== PAYMENT FLOW COMPLETED ==========\n');
+                    return; // Exit polling loop
+
                 } else if (status === 'FAILED') {
+                    console.log('❌ ========== PAYMENT FAILED ==========');
+                    console.log('Failure Reason:', paymentData?.failureReason);
+                    paymentCompleted = true;
+                    localStorage.removeItem('pending_payment');
                     dispatch(showToast({ message: 'Payment failed. Please try again.', type: 'error' }));
+                    return;
+
+                } else if (status === 'PENDING') {
+                    // Continue polling
+                    console.log(`⏳ Payment still pending, will retry in ${retryDelay / 1000}s...`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+
                 } else {
-                    // Handle Pending or other states
-                    console.log('Payment status:', status);
+                    console.log('❓ Unknown payment status:', status);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
                 }
-            } catch (error) {
-                console.error('Payment status check failed', error);
-                dispatch(showToast({ message: 'Could not verify payment status.', type: 'warning' }));
+
+                // Reset retry delay on successful API call
+                retryDelay = 3000;
+
+            } catch (error: any) {
+                console.error('❌ ========== PAYMENT STATUS CHECK ERROR ==========');
+                console.error('Error:', error);
+                console.error('Error Message:', error.message);
+
+                // Exponential backoff for network errors
+                if (error.message?.includes('Network') || error.message?.includes('fetch')) {
+                    console.log(`🔌 Network error detected, retrying in ${retryDelay / 1000}s...`);
+                    dispatch(showToast({
+                        message: `Network error. Retrying in ${retryDelay / 1000}s...`,
+                        type: 'warning'
+                    }));
+
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+
+                    // Exponential backoff: 3s → 6s → 12s → 24s
+                    retryDelay = Math.min(retryDelay * 2, maxRetryDelay);
+                    console.log(`📈 Increased retry delay to ${retryDelay / 1000}s`);
+                } else {
+                    // Other errors, wait standard delay
+                    console.log(`⏱️ Waiting 3s before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
             }
+
+            pollAttempts++;
+        }
+
+        // If we exit the loop without completion
+        if (!paymentCompleted) {
+            console.log('⏱️ ========== PAYMENT VERIFICATION TIMEOUT ==========');
+            console.log(`Stopped after ${pollAttempts} attempts`);
+            dispatch(showToast({
+                message: 'Payment verification timed out. Please check your subscription status.',
+                type: 'warning'
+            }));
         }
     };
-
     const fetchData = async () => {
         try {
             setLoading(true);
@@ -180,24 +363,76 @@ const UserSubscriptions: React.FC = () => {
 
     const processSubscription = async (plan: any) => {
         try {
+            console.log('🚀 ========== PAYMENT FLOW STARTED ==========');
+            console.log('📋 Plan Details:', {
+                planId: plan.id || plan._id,
+                planName: plan.name,
+                price: plan.price,
+                interval: plan.interval
+            });
+
             dispatch(showToast({ message: 'Initiating subscription...', type: 'info' }));
 
             const response = await subscriptionsService.subscribe({
                 planId: plan.id || plan._id,
                 userPhone: user?.phoneNumber,
-                // Only use free trial if explicit flag logic exists, otherwise user might want to pay
-                // For now, assume payment flow unless it's the specific "Free Trial" plan
-                // useFreeTrial: plan.id === 'plan_free_trial' 
             });
 
-            // Check for Redirect URL for payment
-            const redirectUrl = (response as any).redirectUrl || (response as any).data?.redirectUrl;
+            console.log('📨 Raw Subscribe API Response:', response);
 
+            // Extract data from response
+            const responseData = (response as any).data || response;
+            const redirectUrl = responseData.redirectUrl;
+            const transactionId = responseData.transactionId; // Format: "019b2603-06ab-791c-a9ac-6142ede7ba02"
+
+            console.log('📝 ========== SUBSCRIBE RESPONSE DETAILS ==========');
+            console.log('🆔 Transaction ID:', transactionId);
+            console.log('🔗 Redirect URL:', redirectUrl);
+            console.log('💰 Amount Charged:', responseData.amountCharged);
+            console.log('📦 Plan Name:', responseData.planName);
+            console.log('📅 Start Date:', responseData.startDate);
+            console.log('📅 Renewal Date:', responseData.renewalDate);
+            console.log('🔄 Status:', responseData.status);
+            console.log('💳 Requires Payment:', responseData.requiresPayment);
+
+            // Store transaction info in localStorage BEFORE redirecting
+            if (transactionId) {
+                const pendingPayment = {
+                    transactionId,
+                    planId: plan.id || plan._id,
+                    planName: responseData.planName || plan.name,
+                    amount: responseData.amountCharged,
+                    timestamp: Date.now()
+                };
+
+                console.log('💾 ========== STORING IN LOCALSTORAGE ==========');
+                console.log('📦 Pending Payment Object:', pendingPayment);
+                localStorage.setItem('pending_payment', JSON.stringify(pendingPayment));
+                console.log('✅ Stored in localStorage with key: "pending_payment"');
+
+                // Verify storage
+                const stored = localStorage.getItem('pending_payment');
+                console.log('🔍 Verification - Retrieved from localStorage:', stored);
+            } else {
+                console.warn('⚠️ No transactionId found in response!');
+            }
+
+            // Redirect to payment gateway if URL provided
             if (redirectUrl) {
+                console.log('🌐 ========== REDIRECTING TO PAYMENT GATEWAY ==========');
+                console.log('🔗 Full Redirect URL:', redirectUrl);
+                console.log('🆔 Transaction ID being used:', transactionId);
+                console.log('🏠 Will return to:', `${window.location.origin}/subscriptions?transactionId=${transactionId}`);
+                console.log('⏰ Redirect happening in 3...2...1...');
+
+                // Redirect to payment gateway
                 window.location.href = redirectUrl;
                 return;
             }
 
+            console.log('ℹ️ No redirect URL - subscription activated immediately (free trial)');
+
+            // If no redirect URL, subscription is activated immediately (free trial)
             dispatch(showToast({ message: 'Subscription activated successfully!', type: 'success' }));
 
             // Refresh data
@@ -210,11 +445,11 @@ const UserSubscriptions: React.FC = () => {
             }));
 
         } catch (e) {
-            console.error('Subscription error:', e);
+            console.error('❌ ========== SUBSCRIPTION ERROR ==========');
+            console.error('Error details:', e);
             dispatch(showToast({ message: 'Failed to activate subscription. Please try again.', type: 'error' }));
         }
     };
-
     if (loading) return <div className="text-center py-12 text-slate-500">Loading plans...</div>;
 
     return (

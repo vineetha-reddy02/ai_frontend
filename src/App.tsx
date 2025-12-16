@@ -58,6 +58,7 @@ import { RootState } from './store';
 import { setTheme } from './store/uiSlice';
 import CallManager from './components/voice-call/CallManager';
 import { LanguagePopup } from './components/common/LanguagePopup';
+import { usePaymentVerification } from './hooks/usePaymentVerification';
 
 /**
  * Smart Dashboard Router - Routes based on user role
@@ -146,6 +147,9 @@ function App() {
   const dispatch = useDispatch();
   const { theme } = useSelector((state: RootState) => state.ui);
   const { user } = useSelector((state: RootState) => state.auth);
+
+  // Global payment verification - checks localStorage on every page load
+  usePaymentVerification();
 
   // Debug: Log app initialization
   console.log('[App] Initialized with user:', user?.role);

@@ -175,16 +175,26 @@ export interface Referral {
 }
 
 // Coupon Types
-// Coupon Types
+export const DiscountType = {
+  Percentage: 1,
+  Flat: 2
+} as const;
+
+export const ApplicabilityType = {
+  AllSubscriptions: 1,
+  SpecificQuizzes: 2,
+  SpecificPlans: 3
+} as const;
+
 export interface Coupon {
   id: string;
   code: string;
   description: string;
-  discountType: 'Percentage' | 'FixedAmount';
+  discountType: 'Percentage' | 'Flat' | 'FixedAmount'; // API returns 'Flat', keeping FixedAmount for legacy safety
   discountValue: number;
   maxDiscountAmount: number;
   minimumPurchaseAmount: number;
-  applicableTo: 'Both' | 'Quiz' | 'Plan';
+  applicableTo: 'AllSubscriptions' | 'SpecificQuizzes' | 'SpecificPlans' | 'Both' | 'Quiz' | 'Plan'; // Matching API & Legacy
   specificQuizIds: string[];
   specificPlanIds: string[];
   maxTotalUsage: number;
@@ -201,11 +211,11 @@ export interface Coupon {
 export interface CreateCouponRequest {
   code: string;
   description: string;
-  discountType: 'Percentage' | 'FixedAmount';
+  discountType: number; // 1 (Percentage) or 2 (Flat)
   discountValue: number;
   maxDiscountAmount?: number;
   minimumPurchaseAmount?: number;
-  applicableTo: 'Both' | 'Quiz' | 'Plan';
+  applicableTo: number; // 1 (All), 2 (Quiz), 3 (Plan)
   specificQuizIds?: string[];
   specificPlanIds?: string[];
   maxTotalUsage?: number;

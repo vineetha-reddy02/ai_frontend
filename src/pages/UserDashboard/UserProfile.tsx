@@ -44,6 +44,13 @@ const UserProfile: React.FC = () => {
         }
     }, [tabParam]);
 
+    // Refresh profile when switching back to profile tab
+    useEffect(() => {
+        if (activeTab === 'profile' && !loading) {
+            fetchProfile();
+        }
+    }, [activeTab]);
+
     // Update URL when tab changes
     const handleTabChange = (tab: ProfileTabType) => {
         setActiveTab(tab);
@@ -79,6 +86,14 @@ const UserProfile: React.FC = () => {
             // If justSubscribed is true, poll aggressively
             const isJustSubscribed = (window.history.state?.usr?.justSubscribed) || (location.state as any)?.justSubscribed;
 
+            console.log('🔍 Profile Page - Subscription Check:', {
+                isJustSubscribed,
+                locationState: location.state,
+                historyState: window.history.state,
+                userSubscriptionStatus: data.subscriptionStatus,
+                userSubscriptionPlan: data.subscriptionPlan
+            });
+
             let attempts = 0;
             // If just subscribed, retry up to 10 times (10 seconds), otherwise just once
             const maxAttempts = isJustSubscribed ? 10 : 1;
@@ -86,17 +101,29 @@ const UserProfile: React.FC = () => {
 
             while (attempts < maxAttempts && !subFound) {
                 try {
+                    console.log(`🔄 Fetching subscription (attempt ${attempts + 1}/${maxAttempts})...`);
                     const subRes = await subscriptionsService.current();
                     const subData = (subRes as any)?.data || subRes;
+
+                    console.log('📦 Subscription API Response:', {
+                        raw: subRes,
+                        extracted: subData,
+                        hasStatus: !!subData?.status,
+                        hasPlanId: !!subData?.planId,
+                        status: subData?.status,
+                        planName: subData?.planName || subData?.plan?.name
+                    });
 
                     // Only set if we have valid data
                     if (subData && (subData.status || subData.planId)) {
                         // If we are waiting for a NEW subscription, ensure it is actually active/trialing
                         // before accepting it, to avoid picking up an old cancelled one if backend hasn't updated
-                        if (isJustSubscribed && !['active', 'trialing'].includes(subData.status?.toLowerCase())) {
+                        if (isJustSubscribed && !['active', 'trialing', 'succeeded'].includes(subData.status?.toLowerCase())) {
+                            console.log(`⏳ Subscription found but status is "${subData.status}", waiting for active/trialing...`);
                             throw new Error("Subscription found but not active yet");
                         }
 
+                        console.log('✅ Valid subscription found:', subData);
                         setCurrentSubscription(subData);
                         subFound = true; // Exit loop
 
@@ -112,12 +139,35 @@ const UserProfile: React.FC = () => {
                             dispatch(showToast({ message: "Subscription verified!", type: "success" }));
                         }
                     } else {
+                        console.log('❌ No valid subscription data found');
                         setCurrentSubscription(null);
                     }
                 } catch (e) {
-                    console.log(`Subscription fetch attempt ${attempts + 1} failed:`, e);
+                    console.log(`❌ Subscription fetch attempt ${attempts + 1} failed:`, e);
                     if (attempts === maxAttempts - 1) {
-                        setCurrentSubscription(null);
+                        // FALLBACK: Use subscription data from user profile if API fails
+                        console.log('🔍 Checking user profile for subscription data:', {
+                            subscriptionStatus: data.subscriptionStatus,
+                            subscriptionPlan: data.subscriptionPlan,
+                            subscription: data.subscription
+                        });
+
+                        if (data.subscriptionStatus || data.subscription) {
+                            console.log('💡 Using subscription data from user profile as fallback');
+                            const fallbackSub = {
+                                status: data.subscriptionStatus || data.subscription?.status,
+                                planName: data.subscriptionPlan || data.subscription?.planName || data.subscription?.plan?.name,
+                                plan: data.subscription?.plan || { name: data.subscriptionPlan },
+                                renewalDate: data.subscription?.renewalDate || data.subscription?.endDate,
+                                endDate: data.subscription?.endDate
+                            };
+                            console.log('📦 Fallback subscription:', fallbackSub);
+                            setCurrentSubscription(fallbackSub);
+                            subFound = true;
+                        } else {
+                            console.log('❌ No subscription data available in user profile either');
+                            setCurrentSubscription(null);
+                        }
                     } else {
                         // Wait 1 second before retry
                         await new Promise(r => setTimeout(r, 1000));
@@ -256,21 +306,19 @@ const UserProfile: React.FC = () => {
                             <p className="text-white/90 mb-4 text-xs font-semibold uppercase tracking-wider">
                                 {currentSubscription?.plan?.name || currentSubscription?.planName || 'No Active Plan'}
                             </p>
-                            <div className="flex items-center gap-2">
+                            <div className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${['active', 'trialing', 'succeeded', 'year'].includes(currentSubscription?.status?.toLowerCase() || '')
+                                ? 'bg-green-400/30 text-green-100'
+                                : 'bg-red-400/30 text-red-100'
+                                }`}>
                                 {['active', 'trialing', 'succeeded', 'year'].includes(currentSubscription?.status?.toLowerCase() || '')
                                     ? 'ACTIVE'
                                     : 'NO ACTIVE PLAN'}
                             </div>
-                            <div className={`px-3 py-1 rounded-full text-xs font-bold ${['active', 'trialing', 'succeeded', 'year'].includes(currentSubscription?.status?.toLowerCase() || '')
-                                ? 'bg-green-400/30 text-green-100'
-                                : 'bg-red-400/30 text-red-100'
-                                }`}>
-                                {currentSubscription && (
-                                    <span className="text-sm text-white/80">
-                                        {['active', 'trialing', 'succeeded', 'year'].includes(currentSubscription?.status?.toLowerCase() || '') ? 'Renews' : 'Expired'} on {new Date(currentSubscription.renewalDate || currentSubscription.endDate || Date.now()).toLocaleDateString()}
-                                    </span>
-                                )}
-                            </div>
+                            {currentSubscription && (
+                                <p className="text-sm text-white/80 mt-2">
+                                    {['active', 'trialing', 'succeeded', 'year'].includes(currentSubscription?.status?.toLowerCase() || '') ? 'Renews' : 'Expired'} on {new Date(currentSubscription.renewalDate || currentSubscription.endDate || Date.now()).toLocaleDateString()}
+                                </p>
+                            )}
                         </div>
                         <Button
                             variant="outline"

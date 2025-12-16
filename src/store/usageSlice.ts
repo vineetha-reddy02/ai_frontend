@@ -44,6 +44,18 @@ export const usageSlice = createSlice({
             localStorage.setItem('usageData', JSON.stringify(state));
         },
 
+        // Round up current usage to nearest minute (for when call ends)
+        // Backend rounds any partial minute to full minute (e.g., 35 sec = 1 min)
+        roundUpToNearestMinute: (state) => {
+            const remainder = state.voiceCallUsedSeconds % 60;
+            if (remainder > 0) {
+                // Round up to next minute
+                const roundedSeconds = state.voiceCallUsedSeconds + (60 - remainder);
+                state.voiceCallUsedSeconds = Math.min(roundedSeconds, state.voiceCallLimitSeconds);
+                localStorage.setItem('usageData', JSON.stringify(state));
+            }
+        },
+
         // Reset voice call session (called when call ends or daily)
         resetVoiceCallSession: (state) => {
             state.voiceCallUsedSeconds = 0;
@@ -71,6 +83,7 @@ export const usageSlice = createSlice({
 
 export const {
     incrementVoiceCallUsage,
+    roundUpToNearestMinute,
     resetVoiceCallSession,
     resetDailyUsage,
     checkAndReset,

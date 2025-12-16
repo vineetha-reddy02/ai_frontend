@@ -26,6 +26,7 @@ const UserVoiceCall: React.FC = () => {
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
     const [findingPartner, setFindingPartner] = useState(false);
     const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+    const [showVoiceCallLimitModal, setShowVoiceCallLimitModal] = useState(false);
 
     const {
         hasActiveSubscription,
@@ -39,6 +40,22 @@ const UserVoiceCall: React.FC = () => {
 
     const handleRandomCall = async () => {
         if (findingPartner) return;
+
+        // Check voice call time limit BEFORE showing privacy modal
+        if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) {
+            callLogger.warning('Call blocked: No remaining call time');
+            setShowVoiceCallLimitModal(true);
+            return;
+        }
+
+        // Check if user has trial access or subscription
+        if (!hasActiveSubscription && !isTrialActive) {
+            callLogger.warning('Call blocked: No active subscription or trial');
+            triggerUpgradeModal();
+            dispatch(showToast({ message: 'Trial expired. Upgrade to Pro for unlimited calls!', type: 'warning' }));
+            return;
+        }
+
         setFindingPartner(true);
 
         // Minimal UX delay to make it feel like "searching"
@@ -180,8 +197,7 @@ const UserVoiceCall: React.FC = () => {
         // Check session time limit (only if not unlimited)
         if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) {
             callLogger.warning('Call blocked: No remaining call time');
-            triggerUpgradeModal();
-            // dispatch(showToast({ message: 'Daily limit reached. Upgrade to Pro for unlimited calls!', type: 'warning' }));
+            setShowVoiceCallLimitModal(true);
             return;
         }
 
@@ -253,21 +269,22 @@ const UserVoiceCall: React.FC = () => {
                 <div className="flex items-center gap-4">
                     {/* Session Timer/Status */}
                     {activeTab === 'available' && (
-                        (hasActiveSubscription && !isFreeTrial) ? ( // Check for Paid Subscription (not just active)
+                        hasActiveSubscription ? ( // Paid subscribers see unlimited
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                                 <Clock className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                                 <span className="text-xs text-green-900 dark:text-green-200 whitespace-nowrap font-medium">
                                     Unlimited calls
                                 </span>
                             </div>
-                        ) : (
+                        ) : ( // Free trial users see usage
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                                 <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                                <span className="text-xs text-blue-900 dark:text-blue-200 whitespace-nowrap">
-                                    5 min/day
+                                <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">
+                                    {Math.floor((voiceCallLimitSeconds - voiceCallRemainingSeconds) / 60)}:{String((voiceCallLimitSeconds - voiceCallRemainingSeconds) % 60).padStart(2, '0')} used
                                 </span>
-                                <span className={`text-xs font-mono font-bold ${!hasVoiceCallTimeRemaining ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
-                                    {Math.floor(voiceCallRemainingSeconds / 60)}:{String(voiceCallRemainingSeconds % 60).padStart(2, '0')}
+                                <span className="text-xs text-slate-400 dark:text-slate-600">/</span>
+                                <span className={`text-sm font-mono font-bold ${!hasVoiceCallTimeRemaining ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
+                                    {Math.floor(voiceCallRemainingSeconds / 60)}:{String(voiceCallRemainingSeconds % 60).padStart(2, '0')} left
                                 </span>
                             </div>
                         )
@@ -351,7 +368,16 @@ const UserVoiceCall: React.FC = () => {
                             <Button
                                 size="lg"
                                 className={`w-full h-14 text-lg shadow-lg shadow-blue-500/20 rounded-full ${findingPartner ? 'animate-pulse cursor-wait' : ''}`}
-                                onClick={() => setShowPrivacyModal(true)}
+                                onClick={() => {
+                                    // Check voice call limit first
+                                    if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) {
+                                        setShowVoiceCallLimitModal(true);
+                                    } else if (!hasActiveSubscription && !isTrialActive) {
+                                        triggerUpgradeModal();
+                                    } else {
+                                        setShowPrivacyModal(true);
+                                    }
+                                }}
                                 disabled={findingPartner || loading || availableUsers.length === 0}
                                 leftIcon={findingPartner ? <RefreshCw className="animate-spin" /> : <Phone />}
                             >
@@ -428,8 +454,8 @@ const UserVoiceCall: React.FC = () => {
                                     <div key={call.callId || call.id} className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between transition-hover hover:border-blue-300 dark:hover:border-blue-700">
                                         <div className="flex items-center gap-4">
                                             <div className={`p-2.5 rounded-full ${status === 'Completed' ? 'bg-green-100 text-green-600 dark:bg-green-900/30' :
-                                                    status === 'Missed' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
-                                                        'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                                                status === 'Missed' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
+                                                    'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                                                 }`}>
                                                 {/* Direction Icon */}
                                                 {isIncoming ? (
@@ -482,6 +508,74 @@ const UserVoiceCall: React.FC = () => {
                             <p className="text-slate-500">No call history found.</p>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Voice Call Limit Reached Modal */}
+            {showVoiceCallLimitModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600 dark:text-red-400">
+                                <Clock size={32} />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                                Voice Call Limit Reached
+                            </h3>
+                            <p className="text-slate-600 dark:text-slate-400">
+                                You've used your 5 minutes of free voice calls
+                            </p>
+                        </div>
+
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl mb-6">
+                            <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed mb-3">
+                                <strong>Good news!</strong> Your 24-hour free trial is still active. You can continue using:
+                            </p>
+                            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-2 ml-4">
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+                                    <span>AI Pronunciation Practice</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+                                    <span>Topics & Learning Materials</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+                                    <span>Quizzes & Assessments</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-4 rounded-xl mb-6 border border-indigo-200 dark:border-indigo-800">
+                            <p className="text-sm font-medium text-indigo-900 dark:text-indigo-200 mb-2">
+                                Want unlimited voice calls?
+                            </p>
+                            <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                                Upgrade to Pro for unlimited voice calls, advanced features, and more!
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setShowVoiceCallLimitModal(false)}
+                            >
+                                Continue Trial
+                            </Button>
+                            <Button
+                                variant="primary"
+                                className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                                onClick={() => {
+                                    setShowVoiceCallLimitModal(false);
+                                    navigate('/subscriptions');
+                                }}
+                            >
+                                Upgrade Now
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

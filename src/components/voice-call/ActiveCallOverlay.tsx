@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { PhoneOff, Mic, MicOff } from 'lucide-react';
+import { PhoneOff, Mic, MicOff, Clock } from 'lucide-react';
 import { RootState } from '../../store';
 import { updateDuration } from '../../store/callSlice';
+import { incrementVoiceCallUsage, roundUpToNearestMinute } from '../../store/usageSlice';
 import { useVoiceCall } from '../../hooks/useVoiceCall';
+import { useUsageLimits } from '../../hooks/useUsageLimits';
 import { callLogger } from '../../utils/callLogger';
 
 const ActiveCallOverlay: React.FC = () => {
@@ -11,6 +13,12 @@ const ActiveCallOverlay: React.FC = () => {
     const { currentCall, callState, isMuted, durationSeconds, isCallActive } = useSelector((state: RootState) => state.call);
     const { user } = useSelector((state: RootState) => state.auth);
     const { endCall, toggleMute } = useVoiceCall();
+    const {
+        voiceCallRemainingSeconds,
+        hasActiveSubscription,
+        isFreeTrial,
+        voiceCallLimitSeconds
+    } = useUsageLimits();
 
     const [showWarning, setShowWarning] = useState(false);
 
@@ -22,17 +30,19 @@ const ActiveCallOverlay: React.FC = () => {
     const partnerName = isIncoming ? currentCall?.callerName : currentCall?.calleeName;
     const partnerAvatar = isIncoming ? currentCall?.callerAvatar : currentCall?.calleeAvatar;
 
-    // ... (keep formatTime and effects) ...
-
+    // Calculate remaining time for this call session
+    const sessionRemainingSeconds = voiceCallRemainingSeconds - durationSeconds;
+    // Free tier user = no active subscription (hasActiveSubscription already checks for paid plans)
+    const isFreeTierUser = !hasActiveSubscription;
 
     // Format time display
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} `;
     };
 
-    // Call duration timer
+    // Call duration timer with real-time usage tracking
     useEffect(() => {
         let interval: NodeJS.Timeout;
 
@@ -41,6 +51,11 @@ const ActiveCallOverlay: React.FC = () => {
 
             interval = setInterval(() => {
                 dispatch(updateDuration(durationSeconds + 1));
+
+                // Increment usage for free tier users in real-time
+                if (isFreeTierUser && voiceCallLimitSeconds !== -1) {
+                    dispatch(incrementVoiceCallUsage(1));
+                }
 
                 // Log every minute
                 if ((durationSeconds + 1) % 60 === 0) {
@@ -57,22 +72,42 @@ const ActiveCallOverlay: React.FC = () => {
                 clearInterval(interval);
             }
         };
-    }, [callState, durationSeconds, dispatch, currentCall?.callId]);
+    }, [callState, durationSeconds, dispatch, currentCall?.callId, isFreeTierUser, voiceCallLimitSeconds]);
 
-    // Duration warning (show when approaching limit)
+    // Duration warning for free tier users
     useEffect(() => {
-        // Show warning at 5 minutes remaining (assuming 15 min free trial limit)
-        const freeTrialLimit = 15 * 60; // 15 minutes in seconds
-        const warningThreshold = freeTrialLimit - (5 * 60); // 10 minutes
+        if (!isFreeTierUser) {
+            setShowWarning(false);
+            return;
+        }
 
-        if (durationSeconds >= warningThreshold && durationSeconds < freeTrialLimit) {
+        // Show warning when less than 1 minute remaining
+        const warningThreshold = 60; // 60 seconds
+
+        if (sessionRemainingSeconds <= warningThreshold && sessionRemainingSeconds > 0) {
             if (!showWarning) {
                 setShowWarning(true);
-                const remaining = freeTrialLimit - durationSeconds;
-                callLogger.warning(`⏰ Call time warning: ${Math.floor(remaining / 60)} minutes remaining`);
+                callLogger.warning(`⏰ Call time warning: ${sessionRemainingSeconds} seconds remaining`);
             }
+        } else {
+            setShowWarning(false);
         }
-    }, [durationSeconds, showWarning]);
+    }, [sessionRemainingSeconds, showWarning, isFreeTierUser]);
+
+    // Auto-end call when time limit is reached
+    useEffect(() => {
+        if (!isFreeTierUser || !currentCall || callState !== 'active') return;
+
+        // End call when time limit is exhausted
+        if (sessionRemainingSeconds <= 0) {
+            callLogger.warning('⏱️ Free trial time limit reached, auto-ending call');
+
+            // Round up to nearest minute before ending
+            dispatch(roundUpToNearestMinute());
+
+            endCall('Free trial time limit reached');
+        }
+    }, [sessionRemainingSeconds, isFreeTierUser, currentCall, callState, endCall, dispatch]);
 
     if (!shouldShow || !currentCall) return null;
 
@@ -85,6 +120,12 @@ const ActiveCallOverlay: React.FC = () => {
         const result = await endCall();
 
         if (result.success) {
+            // Round up to nearest minute for free tier users (matches backend billing)
+            if (isFreeTierUser && voiceCallLimitSeconds !== -1) {
+                dispatch(roundUpToNearestMinute());
+                callLogger.info('⏱️ Rounded usage to nearest minute for free tier user');
+            }
+
             callLogger.info('✅ Call ended successfully', {
                 callId: currentCall.callId,
                 finalDuration: formatTime(durationSeconds)
@@ -96,7 +137,7 @@ const ActiveCallOverlay: React.FC = () => {
 
     const handleToggleMute = async () => {
         const action = isMuted ? 'unmute' : 'mute';
-        callLogger.info(`🎤 User toggled ${action}`, {
+        callLogger.info(`🎤 User toggled ${action} `, {
             callId: currentCall.callId
         });
 
@@ -126,10 +167,10 @@ const ActiveCallOverlay: React.FC = () => {
     return (
         <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
             {/* Duration Warning Badge */}
-            {showWarning && callState === 'active' && (
+            {showWarning && callState === 'active' && isFreeTierUser && (
                 <div className="bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 px-4 py-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom">
                     <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                        ⏰ 5 minutes remaining
+                        ⏰ {formatTime(Math.max(0, sessionRemainingSeconds))} remaining
                     </p>
                 </div>
             )}
@@ -155,8 +196,8 @@ const ActiveCallOverlay: React.FC = () => {
                         <h4 className="font-semibold text-slate-900 dark:text-white truncate">
                             {partnerName}
                         </h4>
-                        <p className={`text-sm font-medium ${callState === 'active' ? '' : 'animate-pulse'
-                            } ${getStatusColor()}`}>
+                        <p className={`text - sm font - medium ${callState === 'active' ? '' : 'animate-pulse'
+                            } ${getStatusColor()} `}>
                             {getStatusText()}
                         </p>
                     </div>
@@ -167,10 +208,10 @@ const ActiveCallOverlay: React.FC = () => {
                     {/* Mute Toggle */}
                     <button
                         onClick={handleToggleMute}
-                        className={`p-3 rounded-full transition-all ${isMuted
+                        className={`p - 3 rounded - full transition - all ${isMuted
                             ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
                             : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600'
-                            }`}
+                            } `}
                         title={isMuted ? "Unmute" : "Mute"}
                     >
                         {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
@@ -186,13 +227,32 @@ const ActiveCallOverlay: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Connection Quality Indicator (placeholder for future) */}
+                {/* Connection Quality & Remaining Time */}
                 {callState === 'active' && (
-                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
                         <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                             <span>Connected</span>
                         </div>
+
+                        {/* Free Tier Remaining Time Display */}
+                        {isFreeTierUser && sessionRemainingSeconds > 0 && (
+                            <div className="flex items-center justify-center gap-2 text-xs">
+                                <Clock size={14} className="text-blue-500" />
+                                <span className="font-medium text-blue-600 dark:text-blue-400">
+                                    {formatTime(Math.max(0, sessionRemainingSeconds))} remaining
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Time Limit Reached */}
+                        {isFreeTierUser && sessionRemainingSeconds <= 0 && (
+                            <div className="flex items-center justify-center gap-2 text-xs">
+                                <span className="font-medium text-red-600 dark:text-red-400">
+                                    Free trial time limit reached
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

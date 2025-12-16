@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Tag, Search, Filter, Calendar, TrendingUp, X, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, Tag, Search, Filter, Calendar, TrendingUp, X, ArrowLeft, Check, Copy } from 'lucide-react';
 import AdminLayout from '../../components/AdminLayout';
 import Button from '../../components/Button';
 import { couponsService } from '../../services/coupons';
+import { subscriptionsService } from '../../services/subscriptions';
+
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../store/uiSlice';
-import type { Coupon } from '../../types';
+import { Coupon, DiscountType, ApplicabilityType } from '../../types';
+
+interface PlanOption {
+    id: string;
+    name: string;
+}
+
+interface QuizOption {
+    id: string;
+    title: string;
+}
 
 const AdminCouponsPage: React.FC = () => {
     const dispatch = useDispatch();
@@ -20,6 +32,15 @@ const AdminCouponsPage: React.FC = () => {
     const [creating, setCreating] = useState(false);
     const [updating, setUpdating] = useState(false);
 
+    // Data options for selection
+    const [planOptions, setPlanOptions] = useState<PlanOption[]>([]);
+    const [quizOptions, setQuizOptions] = useState<QuizOption[]>([]);
+
+    // Form states for multi-selection
+    const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
+    const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([]);
+    const [createApplicableType, setCreateApplicableType] = useState<number>(ApplicabilityType.AllSubscriptions);
+
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive' | 'Expired'>('all');
@@ -27,11 +48,27 @@ const AdminCouponsPage: React.FC = () => {
 
     useEffect(() => {
         fetchCoupons();
+        fetchOptions();
     }, []);
 
     useEffect(() => {
         applyFilters();
     }, [coupons, searchTerm, statusFilter, applicableToFilter]);
+
+    const fetchOptions = async () => {
+        try {
+            // Fetch Plans
+            const plansRes = await subscriptionsService.getPlans();
+            const plansData = (plansRes as any)?.data || (Array.isArray(plansRes) ? plansRes : []);
+            setPlanOptions(plansData);
+
+            // Quizzes fetching disabled as per request
+            setQuizOptions([]);
+        } catch (error) {
+            console.error('Failed to fetch options:', error);
+            dispatch(showToast({ message: 'Failed to load plan options', type: 'error' }));
+        }
+    };
 
     const fetchCoupons = async () => {
         try {
@@ -66,7 +103,14 @@ const AdminCouponsPage: React.FC = () => {
 
         // ApplicableTo filter
         if (applicableToFilter !== 'all') {
-            filtered = filtered.filter(c => c.applicableTo === applicableToFilter);
+            filtered = filtered.filter(c => {
+                const type = c.applicableTo;
+                // Map API enum string/number to filter logic
+                if (applicableToFilter === 'Both') return type === 'AllSubscriptions' || type === 'Both' || type === 1;
+                if (applicableToFilter === 'Quiz') return type === 'SpecificQuizzes' || type === 'Quiz' || type === 2;
+                if (applicableToFilter === 'Plan') return type === 'SpecificPlans' || type === 'Plan' || type === 3;
+                return true;
+            });
         }
 
         setFilteredCoupons(filtered);
@@ -76,21 +120,31 @@ const AdminCouponsPage: React.FC = () => {
         e.preventDefault();
         const formData = new FormData(e.target as HTMLFormElement);
 
+        // Map form values to Enum integers for API
+        const formDiscountType = formData.get('discountType') as string;
+        // 1 = Percentage, 2 = Flat
+        const discountType = formDiscountType === 'Percentage' ? DiscountType.Percentage : DiscountType.Flat;
+
+        // Applicable Type logic
+        // 1 = All/Both, 2 = Quiz, 3 = Plan
+        // If 2, send specificQuizIds. If 3, send specificPlanIds.
+        const applicableTo = parseInt(formData.get('applicableTo') as string) || ApplicabilityType.AllSubscriptions;
+
         const data = {
             code: formData.get('code') as string,
             description: formData.get('description') as string,
-            discountType: formData.get('discountType') as 'Percentage' | 'FixedAmount',
+            discountType: discountType,
             discountValue: parseFloat(formData.get('discountValue') as string),
             maxDiscountAmount: parseFloat(formData.get('maxDiscountAmount') as string) || 0,
             minimumPurchaseAmount: parseFloat(formData.get('minimumPurchaseAmount') as string) || 0,
-            applicableTo: formData.get('applicableTo') as 'Both' | 'Quiz' | 'Plan',
-            specificQuizIds: [],
-            specificPlanIds: [],
+            applicableTo: applicableTo,
+            specificQuizIds: applicableTo === ApplicabilityType.SpecificQuizzes ? selectedQuizzes : [],
+            specificPlanIds: applicableTo === ApplicabilityType.SpecificPlans ? selectedPlans : [],
             maxTotalUsage: parseInt(formData.get('maxTotalUsage') as string) || 1000,
             maxUsagePerUser: parseInt(formData.get('maxUsagePerUser') as string) || 1,
-            startDate: new Date().toISOString(),
+            startDate: new Date(formData.get('startDate') as string).toISOString(),
             expiryDate: new Date(formData.get('expiryDate') as string).toISOString(),
-            status: 'Active' as const, // Set status to Active by default
+            status: 'Active' as const
         };
 
         console.log('Creating coupon with data:', data);
@@ -101,16 +155,17 @@ const AdminCouponsPage: React.FC = () => {
             dispatch(showToast({ message: 'Coupon created successfully!', type: 'success' }));
             setShowCreateModal(false);
             fetchCoupons();
+            // Reset selection states
+            setSelectedPlans([]);
+            setSelectedQuizzes([]);
             (e.target as HTMLFormElement).reset();
         } catch (error: any) {
             console.error('Create failed:', error);
             console.error('Error response:', error.response?.data);
 
-            // Extract detailed error messages from backend
             const errorData = error.response?.data;
             let errorMsg = 'Failed to create coupon';
 
-            // Check for errors array first (contains specific validation messages)
             if (errorData?.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
                 errorMsg = errorData.errors.join(', ');
             } else if (errorData?.messages && Array.isArray(errorData.messages) && errorData.messages.length > 0) {
@@ -179,6 +234,22 @@ const AdminCouponsPage: React.FC = () => {
         setShowEditModal(true);
     };
 
+    const togglePlanSelection = (planId: string) => {
+        setSelectedPlans(prev =>
+            prev.includes(planId)
+                ? prev.filter(id => id !== planId)
+                : [...prev, planId]
+        );
+    };
+
+    const toggleQuizSelection = (quizId: string) => {
+        setSelectedQuizzes(prev =>
+            prev.includes(quizId)
+                ? prev.filter(id => id !== quizId)
+                : [...prev, quizId]
+        );
+    };
+
     const getStatusBadge = (status: string) => {
         const styles = {
             Active: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
@@ -188,13 +259,24 @@ const AdminCouponsPage: React.FC = () => {
         return styles[status as keyof typeof styles] || styles.Inactive;
     };
 
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        dispatch(showToast({ message: 'Copied to clipboard', type: 'success' }));
+    };
+
+    // Helper to format date for input[type="date"]
+    const formatDateForInput = (dateString?: string) => {
+        if (!dateString) return new Date().toISOString().split('T')[0];
+        return new Date(dateString).toISOString().split('T')[0];
+    };
+
     return (
         <AdminLayout>
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <button 
+                        <button
                             onClick={() => navigate(-1)}
                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-600 dark:text-slate-400"
                         >
@@ -206,7 +288,10 @@ const AdminCouponsPage: React.FC = () => {
                         </div>
                     </div>
                     <Button
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={() => {
+                            setCreateApplicableType(ApplicabilityType.AllSubscriptions); // Reset default
+                            setShowCreateModal(true);
+                        }}
                         leftIcon={<Plus size={18} />}
                     >
                         Create Coupon
@@ -343,13 +428,16 @@ const AdminCouponsPage: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-semibold">
-                                                {coupon.discountType === 'Percentage'
+                                                {coupon.discountType === 'Percentage' || coupon.discountType as any === 1
                                                     ? `${coupon.discountValue}%`
                                                     : `₹${coupon.discountValue}`} OFF
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                                                    {coupon.applicableTo}
+                                                    {coupon.applicableTo === 'AllSubscriptions' || coupon.applicableTo as any === 1 ? 'Both' :
+                                                        coupon.applicableTo === 'SpecificQuizzes' || coupon.applicableTo as any === 2 ? 'Quiz Only' :
+                                                            coupon.applicableTo === 'SpecificPlans' || coupon.applicableTo as any === 3 ? 'Plan Only' :
+                                                                coupon.applicableTo}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-slate-600 dark:text-slate-300 text-sm">
@@ -426,7 +514,7 @@ const AdminCouponsPage: React.FC = () => {
                                             <label className="block text-sm font-medium mb-1 dark:text-slate-300">Discount Type *</label>
                                             <select name="discountType" className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white">
                                                 <option value="Percentage">Percentage</option>
-                                                <option value="FixedAmount">Fixed Amount</option>
+                                                <option value="Flat">Flat (Fixed Amount)</option>
                                             </select>
                                         </div>
                                         <div>
@@ -443,12 +531,87 @@ const AdminCouponsPage: React.FC = () => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1 dark:text-slate-300">Applicable To *</label>
-                                            <select name="applicableTo" className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white">
-                                                <option value="Both">Both (Quiz & Plan)</option>
-                                                <option value="Quiz">Quiz Only</option>
-                                                <option value="Plan">Plan Only</option>
+                                            <select
+                                                name="applicableTo"
+                                                className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                                value={createApplicableType}
+                                                onChange={(e) => setCreateApplicableType(parseInt(e.target.value))}
+                                            >
+                                                <option value={ApplicabilityType.AllSubscriptions}>Both (Applicable to All)</option>
+                                                <option value={ApplicabilityType.SpecificQuizzes}>Specific Quizzes</option>
+                                                <option value={ApplicabilityType.SpecificPlans}>Specific Plans</option>
                                             </select>
                                         </div>
+
+                                        {/* Dynamic Selections */}
+                                        {createApplicableType === ApplicabilityType.SpecificPlans && (
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-medium mb-2 dark:text-slate-300">Select Plans</label>
+                                                <div className="max-h-56 overflow-y-auto border rounded p-2 dark:border-slate-700">
+                                                    {planOptions.map(plan => (
+                                                        <div key={plan.id} className="flex items-start gap-3 mb-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-colors">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedPlans.includes(plan.id)}
+                                                                onChange={() => togglePlanSelection(plan.id)}
+                                                                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium dark:text-slate-200">{plan.name}</p>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <code className="text-xs bg-slate-100 dark:bg-slate-900 text-slate-500 px-1 py-0.5 rounded">{plan.id}</code>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copyToClipboard(plan.id)}
+                                                                        title="Copy ID"
+                                                                        className="text-slate-400 hover:text-blue-500"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {planOptions.length === 0 && <p className="text-xs text-slate-500">No plans available.</p>}
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-1">{selectedPlans.length} plans selected</p>
+                                            </div>
+                                        )}
+
+                                        {createApplicableType === ApplicabilityType.SpecificQuizzes && (
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-medium mb-2 dark:text-slate-300">Select Quizzes</label>
+                                                <div className="max-h-56 overflow-y-auto border rounded p-2 dark:border-slate-700">
+                                                    {quizOptions.map(quiz => (
+                                                        <div key={quiz.id} className="flex items-start gap-3 mb-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-colors">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedQuizzes.includes(quiz.id)}
+                                                                onChange={() => toggleQuizSelection(quiz.id)}
+                                                                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium dark:text-slate-200">{quiz.title}</p>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <code className="text-xs bg-slate-100 dark:bg-slate-900 text-slate-500 px-1 py-0.5 rounded">{quiz.id}</code>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copyToClipboard(quiz.id)}
+                                                                        title="Copy ID"
+                                                                        className="text-slate-400 hover:text-blue-500"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {quizOptions.length === 0 && <p className="text-xs text-slate-500">No quizzes available.</p>}
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-1">{selectedQuizzes.length} quizzes selected</p>
+                                            </div>
+                                        )}
+
                                         <div>
                                             <label className="block text-sm font-medium mb-1 dark:text-slate-300">Max Total Usage *</label>
                                             <input name="maxTotalUsage" type="number" defaultValue="1000" required className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
@@ -458,8 +621,23 @@ const AdminCouponsPage: React.FC = () => {
                                             <input name="maxUsagePerUser" type="number" defaultValue="1" required className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">Expiry Date *</label>
-                                            <input name="expiryDate" type="date" required className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
+                                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">Start Date *</label>
+                                            <input
+                                                name="startDate"
+                                                type="date"
+                                                required
+                                                defaultValue={formatDateForInput()}
+                                                className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">End Date *</label>
+                                            <input
+                                                name="expiryDate"
+                                                type="date"
+                                                required
+                                                className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                            />
                                         </div>
                                     </div>
                                     <div className="md:col-span-2">
@@ -522,11 +700,11 @@ const AdminCouponsPage: React.FC = () => {
                                             <input name="maxUsagePerUser" type="number" defaultValue={editingCoupon.maxUsagePerUser} required className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">Expiry Date *</label>
+                                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">End Date *</label>
                                             <input
                                                 name="expiryDate"
                                                 type="date"
-                                                defaultValue={new Date(editingCoupon.expiryDate).toISOString().split('T')[0]}
+                                                defaultValue={formatDateForInput(editingCoupon.expiryDate)}
                                                 required
                                                 className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                                             />
