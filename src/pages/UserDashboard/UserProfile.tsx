@@ -13,6 +13,7 @@ import UserReferrals from './UserReferrals';
 import UserCoupons from './UserCoupons';
 import { subscriptionsService } from '../../services/subscriptions';
 
+
 type ProfileTabType = 'profile' | 'wallet' | 'subscriptions' | 'referrals' | 'coupons';
 
 const UserProfile: React.FC = () => {
