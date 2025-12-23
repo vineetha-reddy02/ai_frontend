@@ -137,6 +137,10 @@ export interface PronunciationParagraph {
   language?: string;
   createdBy?: string;
   createdAt?: string;
+  phoneticTranscription?: string;
+  referenceAudioUrl?: string;
+  wordCount?: number;
+  estimatedDurationSeconds?: number;
 }
 
 export interface AiAssessmentResponse {

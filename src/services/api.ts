@@ -68,7 +68,16 @@ class ApiService {
 
         // Only unwrap if response has the wrapper structure
         if (axiosData && typeof axiosData === 'object' && 'data' in axiosData && axiosData.data !== undefined) {
-          return axiosData.data;
+          const result = axiosData.data;
+          // If result is an array and there is pagination info in parent, attach it
+          if (Array.isArray(result)) {
+            if (axiosData.totalPages !== undefined) (result as any).totalPages = axiosData.totalPages;
+            if (axiosData.currentPage !== undefined) (result as any).currentPage = axiosData.currentPage;
+            if (axiosData.totalCount !== undefined) (result as any).totalCount = axiosData.totalCount;
+            if (axiosData.hasNextPage !== undefined) (result as any).hasNextPage = axiosData.hasNextPage;
+            if (axiosData.hasPreviousPage !== undefined) (result as any).hasPreviousPage = axiosData.hasPreviousPage;
+          }
+          return result;
         }
 
         return axiosData;
@@ -216,4 +225,3 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
-

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Edit2, Save, X, BookOpen, Volume2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, BookOpen, Volume2, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import Button from '../../components/Button';
 import { pronunciationService } from '../../services/pronunciation';
 import { showToast } from '../../store/uiSlice';
@@ -12,6 +12,8 @@ const PronunciationContentManager: React.FC = () => {
     const dispatch = useDispatch();
     const [loading, setLoading] = useState(false);
     const [paragraphs, setParagraphs] = useState<PronunciationParagraph[]>([]);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [isEditing, setIsEditing] = useState(false);
     const [currentParagraph, setCurrentParagraph] = useState<Partial<PronunciationParagraph>>({});
 
@@ -19,14 +21,32 @@ const PronunciationContentManager: React.FC = () => {
         loadParagraphs();
     }, []);
 
-    const loadParagraphs = async () => {
+    const loadParagraphs = async (pageNumber = 1) => {
         try {
             setLoading(true);
-            // Assuming existing service method suitable for instructor to specific list or filter
-            // In a real scenario, might need `getInstructorParagraphs`
-            const res = await pronunciationService.getInstructorParagraphs();
-            const rawData = (res as any)?.data || res;
-            const rawItems = Array.isArray(rawData) ? rawData : (rawData?.items || []);
+            const res = await pronunciationService.getInstructorParagraphs({
+                pageNumber,
+                pageSize: 10
+            });
+
+            let rawItems: any[] = [];
+
+            // Handle if response is already the array (from interceptor)
+            if (Array.isArray(res)) {
+                rawItems = res;
+                // Check for attached metadata on the array (custom interceptor behavior)
+                if ((res as any).totalPages) setTotalPages((res as any).totalPages);
+                if ((res as any).currentPage) setPage((res as any).currentPage);
+            } else {
+                // Handle if response is the wrapper object
+                const data = (res as any)?.data || (res as any)?.items;
+                if (Array.isArray(data)) {
+                    rawItems = data;
+                }
+
+                if ((res as any)?.totalPages) setTotalPages((res as any).totalPages);
+                if ((res as any)?.currentPage) setPage((res as any).currentPage);
+            }
 
             const items: PronunciationParagraph[] = rawItems.map((item: any) => ({
                 id: item.id || item.Id,
@@ -35,13 +55,17 @@ const PronunciationContentManager: React.FC = () => {
                 difficulty: item.difficulty || item.Difficulty,
                 language: item.language || item.Language,
                 createdBy: item.createdBy || item.CreatedBy,
-                createdAt: item.createdAt || item.CreatedAt
+                createdAt: item.createdAt || item.CreatedAt,
+                phoneticTranscription: item.phoneticTranscription || item.PhoneticTranscription,
+                referenceAudioUrl: item.referenceAudioUrl || item.ReferenceAudioUrl,
+                wordCount: item.wordCount,
+                estimatedDurationSeconds: item.estimatedDurationSeconds
             }));
+
             setParagraphs(items);
         } catch (error) {
             console.error('Failed to load paragraphs:', error);
             // dispatch(showToast({ message: 'Failed to load paragraphs', type: 'error' }));
-            // Fallback to empty or mock for now as API might not be fully ready
         } finally {
             setLoading(false);
         }
@@ -55,7 +79,9 @@ const PronunciationContentManager: React.FC = () => {
                 title: '',
                 text: '',
                 difficulty: 'Beginner',
-                language: 'en-US'
+                language: 'en-US',
+                phoneticTranscription: '',
+                referenceAudioUrl: ''
             });
         }
         setIsEditing(true);
@@ -92,6 +118,8 @@ const PronunciationContentManager: React.FC = () => {
                 Text: currentParagraph.text,
                 Difficulty: currentParagraph.difficulty || 'Beginner',
                 Language: currentParagraph.language || 'en-US',
+                PhoneticTranscription: currentParagraph.phoneticTranscription,
+                ReferenceAudioUrl: currentParagraph.referenceAudioUrl,
                 ...(currentParagraph.id ? { Id: currentParagraph.id } : {})
             };
 
@@ -191,43 +219,71 @@ const PronunciationContentManager: React.FC = () => {
                             />
                         </div>
 
-                        <div className="flex gap-4">
-                            <div className="flex-1">
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Difficulty
-                                </label>
-                                <select
-                                    value={currentParagraph.difficulty || 'Beginner'}
-                                    onChange={(e) => setCurrentParagraph(prev => ({ ...prev, difficulty: e.target.value as any }))}
-                                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="Beginner">Beginner</option>
-                                    <option value="Intermediate">Intermediate</option>
-                                    <option value="Advanced">Advanced</option>
-                                </select>
-                            </div>
+                    </div>
 
-                            <div className="flex-1">
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Language
-                                </label>
-                                <input
-                                    type="text"
-                                    value={currentParagraph.language || 'en-US'}
-                                    onChange={(e) => setCurrentParagraph(prev => ({ ...prev, language: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Phonetic Transcription (Optional)
+                            </label>
+                            <input
+                                type="text"
+                                value={currentParagraph.phoneticTranscription || ''}
+                                onChange={(e) => setCurrentParagraph(prev => ({ ...prev, phoneticTranscription: e.target.value }))}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                placeholder="/.../"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Reference Audio URL (Optional)
+                            </label>
+                            <input
+                                type="text"
+                                value={currentParagraph.referenceAudioUrl || ''}
+                                onChange={(e) => setCurrentParagraph(prev => ({ ...prev, referenceAudioUrl: e.target.value }))}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                placeholder="https://..."
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Difficulty
+                            </label>
+                            <select
+                                value={currentParagraph.difficulty || 'Beginner'}
+                                onChange={(e) => setCurrentParagraph(prev => ({ ...prev, difficulty: e.target.value as any }))}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
                         </div>
 
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-                                Cancel
-                            </Button>
-                            <Button variant="primary" size="sm" onClick={handleSave} disabled={loading}>
-                                {loading ? 'Saving...' : 'Save Paragraph'}
-                            </Button>
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Language
+                            </label>
+                            <input
+                                type="text"
+                                value={currentParagraph.language || 'en-US'}
+                                onChange={(e) => setCurrentParagraph(prev => ({ ...prev, language: e.target.value }))}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            />
                         </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" size="sm" onClick={handleSave} disabled={loading}>
+                            {loading ? 'Saving...' : 'Save Paragraph'}
+                        </Button>
                     </div>
                 </div>
             )}
@@ -278,7 +334,38 @@ const PronunciationContentManager: React.FC = () => {
                     </div>
                 )}
             </div>
-        </div>
+
+            {/* Pagination Controls */}
+            {
+                paragraphs.length > 0 && (
+                    <div className="flex items-center justify-between py-4">
+                        <div className="text-sm text-slate-500 dark:text-slate-400">
+                            Page {page} of {totalPages}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => loadParagraphs(page - 1)}
+                                disabled={page <= 1 || loading}
+                                leftIcon={<ChevronLeft size={16} />}
+                            >
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => loadParagraphs(page + 1)}
+                                disabled={page >= totalPages || loading}
+                                rightIcon={<ChevronRight size={16} />}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 
