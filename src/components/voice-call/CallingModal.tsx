@@ -92,7 +92,7 @@ const CallingModal: React.FC = () => {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="w-full h-full bg-primary-600 flex items-center justify-center text-4xl font-bold text-white">
+                                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-4xl font-bold text-white">
                                     {(currentCall.calleeName || '?').charAt(0).toUpperCase()}
                                 </div>
                             )}

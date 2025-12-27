@@ -42,30 +42,30 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, reason = '
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden">
                 {/* Header with gradient */}
-                <div className="relative bg-primary-600 p-8 text-white">
+                <div className="relative bg-gradient-to-r from-yellow-500 to-amber-600 p-6 text-white">
                     <button
                         onClick={onClose}
-                        className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-full transition-colors"
+                        className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-full transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
 
-                    <div className="flex items-center gap-5">
-                        <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-xl border border-white/20 shadow-xl">
-                            <Crown className="w-10 h-10" />
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                            <Crown className="w-8 h-8" />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-black uppercase tracking-tighter italic">Upgrade to Pro</h2>
-                            <p className="text-white/80 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Unlock your full potential</p>
+                            <h2 className="text-2xl font-bold">Upgrade to Pro</h2>
+                            <p className="text-white/90 text-sm">Unlock your full potential</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-8 bg-[var(--bg-primary)]">
+                <div className="p-6">
                     {/* Reason message */}
-                    <div className="mb-8 p-6 glass-card border-primary-500/20 rounded-[1.5rem]">
-                        <p className="text-primary-600 dark:text-primary-400 text-xs font-black uppercase tracking-widest leading-relaxed">
+                    <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <p className="text-amber-900 dark:text-amber-200 text-sm font-medium">
                             {getReasonMessage()}
                         </p>
                     </div>
@@ -90,7 +90,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, reason = '
                     </div>
 
                     {/* Pricing highlight */}
-                    <div className="mb-6 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+                    <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                         <div className="flex items-center gap-2 mb-1">
                             <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                             <span className="text-sm font-semibold text-blue-900 dark:text-blue-200">
@@ -112,7 +112,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, reason = '
                         </button>
                         <button
                             onClick={handleUpgrade}
-                            className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all shadow-lg hover:shadow-xl font-medium border-none"
+                            className="flex-1 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-lg hover:from-yellow-600 hover:to-amber-700 transition-all shadow-lg hover:shadow-xl font-medium"
                         >
                             Upgrade Now
                         </button>

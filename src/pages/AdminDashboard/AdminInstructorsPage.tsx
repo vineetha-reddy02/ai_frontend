@@ -46,7 +46,7 @@ const AdminInstructorsPage: React.FC = () => {
         <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
-            <h1 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">Access Denied</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Access Denied</h1>
             <p className="text-slate-600 dark:text-slate-400 mb-4">Only admins can access this page.</p>
             <Button variant="primary" onClick={() => navigate('/')}>Go Home</Button>
           </div>
@@ -174,7 +174,7 @@ const AdminInstructorsPage: React.FC = () => {
                 <ArrowLeft size={24} />
               </button>
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 dark:text-white mb-2">Instructor Management</h1>
+                <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">Instructor Management</h1>
                 <p className="text-slate-600 dark:text-slate-400">Review and approve instructor applications</p>
               </div>
             </div>
@@ -182,19 +182,19 @@ const AdminInstructorsPage: React.FC = () => {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-blue-50 dark:bg-blue-900/30 p-6 rounded-lg border border-blue-200 dark:border-blue-700">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-6 rounded-lg border border-blue-200 dark:border-blue-700">
               <p className="text-sm text-blue-600 dark:text-blue-300 font-medium mb-2">Total Instructors</p>
               <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
             </div>
-            <div className="bg-yellow-50 dark:bg-yellow-900/30 p-6 rounded-lg border border-yellow-200 dark:border-yellow-700">
+            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 p-6 rounded-lg border border-yellow-200 dark:border-yellow-700">
               <p className="text-sm text-yellow-600 dark:text-yellow-300 font-medium mb-2">Pending Approval</p>
               <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{stats.pending}</p>
             </div>
-            <div className="bg-green-50 dark:bg-green-900/30 p-6 rounded-lg border border-green-200 dark:border-green-700">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-6 rounded-lg border border-green-200 dark:border-green-700">
               <p className="text-sm text-green-600 dark:text-green-300 font-medium mb-2">Approved</p>
               <p className="text-3xl font-bold text-green-900 dark:text-green-100">{stats.approved}</p>
             </div>
-            <div className="bg-purple-50 dark:bg-purple-900/30 p-6 rounded-lg border border-purple-200 dark:border-purple-700">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-6 rounded-lg border border-purple-200 dark:border-purple-700">
               <p className="text-sm text-purple-600 dark:text-purple-300 font-medium mb-2">Actions</p>
               <Button variant="primary" size="sm" onClick={loadInstructors} className="w-full text-xs">
                 Refresh

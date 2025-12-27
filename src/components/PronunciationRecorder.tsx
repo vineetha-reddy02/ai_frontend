@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, StopCircle, RotateCcw, Send, Volume2, Zap } from 'lucide-react';
+import { Mic, StopCircle, RotateCcw, Send, Volume2 } from 'lucide-react';
 import { pronunciationService } from '../services/pronunciation';
 import { formatTime } from '../utils/helpers';
 import Button from './Button';
@@ -337,39 +337,38 @@ export const PronunciationRecorder: React.FC<PronunciationRecorderProps> = ({
   // Show assessment result
   if (showResult && assessmentResult) {
     return (
-      <div className="max-w-2xl mx-auto glass-panel rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/10">
+      <div className="max-w-2xl mx-auto bg-slate-800 rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="bg-primary-600 dark:bg-primary-700 p-8">
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Assessment Results</h2>
-          <p className="text-white/80 text-xs font-bold uppercase tracking-[0.2em] mt-1">AI-Powered Breakdown</p>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
+          <h2 className="text-2xl font-bold text-white">Assessment Results</h2>
         </div>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-6">
           {/* Paragraph */}
-          <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-white/5">
-            <h3 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-3">Original Text</h3>
-            <p className="text-xl text-slate-900 dark:text-white font-medium leading-relaxed">{paragraphText}</p>
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase mb-2">Text to Read</h3>
+            <p className="text-lg text-white">{paragraphText}</p>
           </div>
 
           {/* Score */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-            <div className="bg-white/5 dark:bg-white/[0.03] rounded-2xl p-6 border border-white/10 transition-transform hover:scale-105">
-              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Accuracy</p>
-              <p className="text-4xl font-black text-primary-500 dark:text-primary-400">
-                {(assessmentResult.scores?.accuracy ?? assessmentResult.pronunciationAccuracy ?? assessmentResult.accuracy)?.toFixed(0) || '0'}%
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-slate-700 rounded-lg p-4">
+              <p className="text-sm text-slate-400 mb-1">Accuracy</p>
+              <p className="text-3xl font-bold text-blue-400">
+                {(assessmentResult.scores?.accuracy ?? assessmentResult.pronunciationAccuracy ?? assessmentResult.accuracy)?.toFixed(1) || 'N/A'}%
               </p>
             </div>
-            <div className="bg-white/5 dark:bg-white/[0.03] rounded-2xl p-6 border border-white/10 transition-transform hover:scale-105">
-              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Fluency</p>
-              <p className="text-4xl font-black text-emerald-500 dark:text-emerald-400">
-                {(assessmentResult.scores?.fluency ?? assessmentResult.fluencyScore ?? assessmentResult.fluency)?.toFixed(0) || '0'}%
+            <div className="bg-slate-700 rounded-lg p-4">
+              <p className="text-sm text-slate-400 mb-1">Fluency</p>
+              <p className="text-3xl font-bold text-green-400">
+                {(assessmentResult.scores?.fluency ?? assessmentResult.fluencyScore ?? assessmentResult.fluency)?.toFixed(1) || 'N/A'}%
               </p>
             </div>
-            <div className="bg-white/5 dark:bg-white/[0.03] rounded-2xl p-6 border border-white/10 transition-transform hover:scale-105">
-              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Overall</p>
-              <p className="text-4xl font-black text-amber-500 dark:text-amber-400">
-                {(assessmentResult.scores?.overall ?? assessmentResult.overallScore ?? assessmentResult.OverallScore)?.toFixed(0) || '0'}%
+            <div className="bg-slate-700 rounded-lg p-4">
+              <p className="text-sm text-slate-400 mb-1">Overall Score</p>
+              <p className="text-3xl font-bold text-yellow-400">
+                {(assessmentResult.scores?.overall ?? assessmentResult.overallScore ?? assessmentResult.OverallScore)?.toFixed(1) || 'N/A'}%
               </p>
             </div>
           </div>
@@ -468,19 +467,19 @@ export const PronunciationRecorder: React.FC<PronunciationRecorderProps> = ({
 
   // Recording interface
   return (
-    <div className="max-w-2xl mx-auto glass-panel rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/10">
+    <div className="max-w-2xl mx-auto bg-slate-800 rounded-lg shadow-xl overflow-hidden">
       {/* Header */}
-      <div className="bg-primary-600 dark:bg-primary-700 p-8">
-        <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-1">Voice Practice</h2>
-        <p className="text-white/80 text-xs font-bold uppercase tracking-[0.2em]">Read clearly and confidently</p>
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
+        <h2 className="text-2xl font-bold text-white mb-2">Pronunciation Practice</h2>
+        <p className="text-blue-100">Read the text below carefully and clearly</p>
       </div>
 
       {/* Content */}
       <div className="p-6">
         {/* Text to Read */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">Master the Text</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase">Text to Read</h3>
             <SpeakerPlayButton
               isPlaying={isSpeaking}
               onToggle={handleSpeakerToggle}
@@ -488,10 +487,8 @@ export const PronunciationRecorder: React.FC<PronunciationRecorderProps> = ({
               isLoading={isLoadingAudio}
             />
           </div>
-          <div className={`p-8 rounded-[2rem] transition-all duration-500 ${isSpeaking ? 'bg-primary-500/10 ring-2 ring-primary-500/50' : 'bg-white/5 border border-white/5'}`}>
-            <p className="text-xl md:text-2xl leading-relaxed text-slate-900 dark:text-white font-black tracking-tight">
-              {paragraphText}
-            </p>
+          <div className={`bg-slate-700 rounded-lg p-6 transition-colors duration-300 ${isSpeaking ? 'ring-2 ring-blue-500/50 bg-slate-700/80' : ''}`}>
+            <p className="text-xl leading-relaxed text-white font-medium">{paragraphText}</p>
           </div>
         </div>
 
@@ -526,32 +523,30 @@ export const PronunciationRecorder: React.FC<PronunciationRecorderProps> = ({
             )}
 
             {/* Recording Button */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-4">
               {!isRecording ? (
                 <button
                   onClick={handleStartRecording}
-                  className="flex items-center justify-center gap-4 px-10 h-16 bg-red-600 hover:bg-red-700 rounded-2xl font-black text-white transition-all transform hover:-translate-y-1 shadow-xl shadow-red-500/20 active:scale-95 uppercase tracking-[0.2em] text-xs border-none"
+                  className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg font-semibold text-white transition-all transform hover:scale-105"
                 >
-                  <Mic className="w-5 h-5" />
-                  START RECORDING
+                  <Mic className="w-6 h-6" />
+                  Start Recording
                 </button>
               ) : (
                 <button
                   onClick={handleStopRecording}
-                  className="flex items-center justify-center gap-4 px-10 h-16 bg-orange-600 hover:bg-orange-700 rounded-2xl font-black text-white transition-all transform hover:-translate-y-1 shadow-xl shadow-orange-500/20 active:scale-95 uppercase tracking-[0.2em] text-xs border-none"
+                  className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 rounded-lg font-semibold text-white transition-all transform hover:scale-105"
                 >
-                  <StopCircle className="w-5 h-5" />
-                  STOP RECORDING
+                  <StopCircle className="w-6 h-6" />
+                  Stop Recording
                 </button>
               )}
             </div>
 
             {/* Instructions */}
             {!isRecording && !recordedAudio && (
-              <div className="text-center">
-                <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] bg-white/5 py-2 px-6 rounded-full inline-block border border-white/5">
-                  Click the button above to begin your assessment
-                </p>
+              <div className="text-center text-slate-400 text-sm">
+                <p>Click the button above to start recording. Read the text clearly and naturally.</p>
               </div>
             )}
           </div>
@@ -614,32 +609,14 @@ export const PronunciationRecorder: React.FC<PronunciationRecorderProps> = ({
           </div>
         )}
 
-        {/* Obsidian Protocol Tips */}
-        <div className="mt-8 p-6 glass-card border-primary-500/10 rounded-[2rem]">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-2xl bg-primary-500/10 flex items-center justify-center text-primary-500 border border-primary-500/10">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">Practice Protocol</h3>
-              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">Optimization Guidelines</p>
-            </div>
-          </div>
-
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-            {[
-              { text: 'Speak clearly and naturally', color: 'bg-primary-500' },
-              { text: 'Minimize background noise', color: 'bg-emerald-500' },
-              { text: 'Verify microphone health', color: 'bg-blue-500' },
-              { text: 'Pause briefly between lines', color: 'bg-amber-500' }
-            ].map((tip, i) => (
-              <li key={i} className="flex items-center gap-4 group">
-                <div className={`w-2 h-2 rounded-full ${tip.color} shadow-lg shadow-${tip.color.split('-')[1]}-500/40 group-hover:scale-125 transition-transform`} />
-                <span className="text-xs font-black text-slate-600 dark:text-slate-200 uppercase tracking-wide group-hover:text-primary-500 transition-colors">
-                  {tip.text}
-                </span>
-              </li>
-            ))}
+        {/* Tips */}
+        <div className="bg-slate-700/50 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-slate-300 mb-2">Recording Tips:</h3>
+          <ul className="space-y-1 text-sm text-slate-400">
+            <li>• Speak clearly and at a natural pace</li>
+            <li>• Avoid background noise for better accuracy</li>
+            <li>• Make sure your microphone is working properly</li>
+            <li>• Pause briefly between sentences if needed</li>
           </ul>
         </div>
       </div>

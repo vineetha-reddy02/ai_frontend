@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
     BookOpen,
     FileQuestion,
     Mic,
+    Users,
+    BarChart3,
+    DollarSign,
     Settings,
     LogOut,
     Menu,
+    X,
     Bell
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { logout } from '../../store/authSlice';
-import { ThemeToggle } from '../../components/common/ThemeToggle';
+import { toggleTheme } from '../../store/uiSlice';
+import Button from '../../components/Button';
 
 interface InstructorLayoutProps {
     children: React.ReactNode;
@@ -22,8 +27,10 @@ interface InstructorLayoutProps {
 const InstructorLayout: React.FC<InstructorLayoutProps> = ({ children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { user } = useSelector((state: RootState) => state.auth);
+    const { theme } = useSelector((state: RootState) => state.ui);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleLogout = () => {
         dispatch(logout());
@@ -59,7 +66,7 @@ const InstructorLayout: React.FC<InstructorLayoutProps> = ({ children }) => {
                 <div className="h-full flex flex-col">
                     {/* Logo */}
                     <div className="h-14 md:h-16 flex items-center px-4 md:px-6 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-                        <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                        <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                             EduTalks
                         </span>
                         <span className="ml-2 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
@@ -88,41 +95,28 @@ const InstructorLayout: React.FC<InstructorLayoutProps> = ({ children }) => {
                         ))}
                     </nav>
 
-                    {/* User Profile & Logout - Premium Style */}
+                    {/* User Profile & Logout */}
                     <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-2 flex-shrink-0">
-                        <div className="px-2 py-2 mb-1">
-                            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-80">
-                                Identity & Access Center
-                            </span>
-                        </div>
-
                         <NavLink
                             to="/instructor/profile"
-                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-primary-500/5 transition-all group border border-transparent hover:border-primary-500/10"
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                         >
-                            <div className="relative">
-                                <img
-                                    src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'User')}`}
-                                    alt="Profile"
-                                    className="w-10 h-10 rounded-xl border border-white/20 shadow-lg object-cover"
-                                />
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full shadow-sm" />
-                            </div>
-                            <div className="text-left overflow-hidden">
-                                <p className="text-xs font-black text-primary-500 uppercase tracking-tighter italic truncate">
-                                    {user?.fullName}
-                                </p>
-                                <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5 opacity-60 truncate">
-                                    Certified Instructor
-                                </p>
+                            <img
+                                src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'User')}`}
+                                alt="Profile"
+                                className="w-8 h-8 rounded-full bg-slate-200"
+                            />
+                            <div className="flex-1 min-w-0">
+                                <p className="truncate font-medium text-slate-900 dark:text-white">{user?.fullName}</p>
+                                <p className="truncate text-xs text-slate-500">View Profile</p>
                             </div>
                         </NavLink>
 
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center justify-center gap-3 px-4 py-3 mt-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all font-black text-[10px] uppercase tracking-[0.2em] min-h-[44px] border border-transparent hover:border-red-500/10"
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
-                            <LogOut size={16} className="group-hover:translate-x-1 transition-transform" />
+                            <LogOut size={20} />
                             Sign Out
                         </button>
                     </div>
@@ -141,7 +135,6 @@ const InstructorLayout: React.FC<InstructorLayoutProps> = ({ children }) => {
                     </button>
 
                     <div className="flex items-center gap-4 ml-auto">
-                        <ThemeToggle />
                         <button className="p-2 rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 relative min-h-[44px] min-w-[44px] flex items-center justify-center">
                             <Bell size={20} />
                             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>

@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, TrendingUp, TrendingDown, Clock, ArrowLeft, AlertCircle, CheckCircle, XCircle, Gift } from 'lucide-react';
 import Button from '../../components/Button';
-import { motion, AnimatePresence } from 'framer-motion';
-import { fadeIn, slideUp, buttonClick } from '../../constants/animations';
 import { walletService } from '../../services/wallet';
 import { referralsService } from '../../services/referrals';
 import { useDispatch } from 'react-redux';
@@ -190,266 +188,190 @@ const UserWallet: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6 md:space-y-10">
+        <div className="space-y-4 md:space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-8">
-                <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+            <div className="flex items-center gap-3 md:gap-4">
+                <button
                     onClick={() => navigate(-1)}
-                    className="w-14 h-14 flex items-center justify-center bg-slate-100 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-primary-500/10 dark:border-white/10 text-slate-900 dark:text-white transition-all hover:bg-slate-200 dark:hover:bg-white/10 shadow-2xl"
+                    className="p-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-full transition-colors text-blue-600 dark:text-blue-400"
                 >
                     <ArrowLeft size={24} />
-                </motion.button>
-                <div>
-                    <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
-                        FINANCIAL <span className="text-primary-600 dark:text-primary-400">ASSETS</span>
-                    </h1>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-2 opacity-70">
-                        Liquid Balance & Transaction History
-                    </p>
+                </button>
+                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">My Wallet</h1>
+            </div>
+
+            {/* Balance Card */}
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl md:rounded-2xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <p className="text-indigo-100 font-medium mb-1 flex items-center gap-2">
+                            <Wallet size={18} /> Available Balance
+                        </p>
+                        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">₹{walletData.availableBalance.toFixed(2)}</h2>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 text-xs md:text-sm">
+                            <div>
+                                <p className="text-indigo-200">Total Balance</p>
+                                <p className="font-semibold">₹{walletData.balance.toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <p className="text-indigo-200">Frozen Amount</p>
+                                <p className="font-semibold">₹{walletData.frozenAmount.toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <p className="text-indigo-200">Total Earnings</p>
+                                <p className="font-semibold text-green-300">₹{walletData.totalEarnings.toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <p className="text-indigo-200">Total Spent</p>
+                                <p className="font-semibold text-red-300">₹{walletData.totalSpent.toFixed(2)}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 md:gap-3 w-full sm:w-auto">
+                        <Button
+                            className="bg-white/20 hover:bg-white/30 text-white border-white/40 border shadow-md w-full sm:w-auto min-h-[44px] md:min-h-0"
+                            onClick={() => setShowWithdraw(!showWithdraw)}
+                        >
+                            Withdraw
+                        </Button>
+
+                    </div>
                 </div>
             </div>
 
-            {/* Main Balance Card */}
-            <motion.div
-                variants={slideUp}
-                initial="initial"
-                animate="animate"
-                className="glass-card backdrop-blur-xl rounded-3xl p-6 md:p-10 border border-primary-500/10 shadow-2xl relative overflow-hidden"
-            >
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+            {/* Referral Earnings Card */}
+            {referralEarnings > 0 && (
+                <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl md:rounded-2xl p-4 md:p-6 text-white shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
 
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-10">
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-primary-600/10 rounded-2xl flex items-center justify-center">
-                                <Wallet className="text-primary-600" size={24} />
+                    <div className="relative z-10">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-white/20 rounded-xl">
+                                    <Gift size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-amber-100 font-medium text-sm">Referral Earnings</p>
+                                    <h3 className="text-3xl font-bold">₹{referralEarnings.toFixed(2)}</h3>
+                                </div>
+                            </div>
+                            <Button
+                                onClick={() => navigate('/referrals')}
+                                className="bg-white/20 hover:bg-white/30 text-white border-white/40 border shadow-md text-sm"
+                            >
+                                View Referrals
+                            </Button>
+                        </div>
+
+                        <div className="bg-white/10 rounded-lg p-3 border border-white/20">
+                            <div className="flex items-start gap-2">
+                                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                                <p className="text-xs text-amber-50">
+                                    <strong>Pending Wallet Credit:</strong> Your referral earnings are being processed.
+                                    Once your referred friends complete their requirements, these rewards will be automatically
+                                    credited to your wallet balance.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Withdrawal Form */}
+            {showWithdraw && (
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 animate-in slide-in-from-top-4">
+                    <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Request Withdrawal</h3>
+                    <form onSubmit={handleWithdraw} className="space-y-4 max-w-lg">
+                        <div>
+                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">Amount (₹)</label>
+                            <input name="amount" type="number" min="1" max={walletData.availableBalance} required className="w-full p-2 border rounded dark:bg-slate-900 dark:border-slate-700 dark:text-white" placeholder="0.00" />
+                            <p className="text-xs text-slate-500 mt-1">Available: ₹{walletData.availableBalance.toFixed(2)}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1 dark:text-slate-300">Bank Name</label>
+                                <input name="bankName" required className="w-full p-2 border rounded dark:bg-slate-900 dark:border-slate-700 dark:text-white" placeholder="Bank Name" />
                             </div>
                             <div>
-                                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-tight">Total Available Balance</h3>
-                                <p className="text-[9px] font-black text-primary-600 uppercase tracking-widest mt-0.5 opacity-70">Verified Capital</p>
+                                <label className="block text-sm font-medium mb-1 dark:text-slate-300">IFSC Code</label>
+                                <input name="ifsc" required className="w-full p-2 border rounded dark:bg-slate-900 dark:border-slate-700 dark:text-white" placeholder="IFSC" />
                             </div>
                         </div>
                         <div>
-                            <h4 className="text-2xl md:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight uppercase leading-tight">
-                                {walletData.currency} {walletData.balance.toLocaleString()}
-                            </h4>
-                            <div className="flex flex-wrap items-center gap-6 mt-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Available: {walletData.currency} {walletData.availableBalance.toLocaleString()}</span>
-                                </div>
-                                {walletData.frozenAmount > 0 && (
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Locked: {walletData.currency} {walletData.frozenAmount.toLocaleString()}</span>
-                                    </div>
-                                )}
-                            </div>
+                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">Account Number</label>
+                            <input name="accountNumber" required className="w-full p-2 border rounded dark:bg-slate-900 dark:border-slate-700 dark:text-white" placeholder="Account Number" />
                         </div>
-                    </div>
-
-                    <div className="flex flex-col gap-4 min-w-[200px] w-full md:w-auto">
-                        <Button
-                            size="md"
-                            onClick={() => setShowWithdraw(!showWithdraw)}
-                            className="h-14 px-8 bg-primary-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 hover:scale-105 active:scale-95 transition-all w-full"
-                        >
-                            {showWithdraw ? 'CANCEL WITHDRAWAL' : 'WITHDRAW CAPITAL'}
-                        </Button>
-                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest text-center opacity-70">Standard Settlement: T+2</p>
-                    </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">Account Holder Name</label>
+                            <input name="accountHolderName" required className="w-full p-2 border rounded dark:bg-slate-900 dark:border-slate-700 dark:text-white" placeholder="Name as per bank" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1 dark:text-slate-300">UPI ID (Optional)</label>
+                            <input name="upi" className="w-full p-2 border rounded dark:bg-slate-900 dark:border-slate-700 dark:text-white" placeholder="user@upi" />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                            <Button type="submit" isLoading={withdrawLoading}>Submit Request</Button>
+                            <Button type="button" variant="ghost" onClick={() => setShowWithdraw(false)}>Cancel</Button>
+                        </div>
+                    </form>
                 </div>
-            </motion.div>
+            )}
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="glass-panel p-6 rounded-3xl border border-white/5 shadow-xl">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 bg-primary-600/10 text-primary-600 rounded-xl flex items-center justify-center">
-                            <TrendingUp size={20} />
-                        </div>
-                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Gross Yield</h4>
-                    </div>
-                    <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">₹{walletData.totalEarnings.toLocaleString()}</p>
-                </div>
-                <div className="glass-panel p-6 rounded-3xl border border-white/5 shadow-xl">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 bg-primary-600/10 text-primary-600 rounded-xl flex items-center justify-center">
-                            <Gift size={20} />
-                        </div>
-                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Voucher Accruals</h4>
-                    </div>
-                    <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">₹{referralEarnings.toLocaleString()}</p>
-                </div>
-                <div className="glass-panel p-6 rounded-3xl border border-white/5 shadow-xl">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center">
-                            <TrendingDown size={20} />
-                        </div>
-                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Outbound Flows</h4>
-                    </div>
-                    <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">₹{walletData.totalSpent.toLocaleString()}</p>
-                </div>
-            </div>
-
-            {/* Withdrawal Interface */}
-            <AnimatePresence>
-                {showWithdraw && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, height: 'auto', scale: 1 }}
-                        exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                        className="glass-card rounded-3xl p-6 md:p-10 border border-[#433355]/20 shadow-2xl relative overflow-hidden"
-                    >
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-
-                        <div className="flex items-center gap-4 mb-10">
-                            <div className="w-12 h-12 bg-red-400/10 rounded-2xl flex items-center justify-center">
-                                <TrendingDown className="text-red-400" size={24} />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Withdrawal Authorization</h3>
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1 opacity-70">Secured Settlement Channel</p>
-                            </div>
-                        </div>
-
-                        <form onSubmit={handleWithdraw} className="space-y-10">
-                            <div className="space-y-8">
-                                {/* Amount Input */}
-                                <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-6 ml-1 opacity-70">Transfer Volume</label>
-                                    <div className="relative">
-                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-900 dark:text-white opacity-20">₹</span>
-                                        <input
-                                            name="amount"
-                                            type="number"
-                                            min="1"
-                                            max={walletData.availableBalance}
-                                            required
-                                            className="w-full pl-16 pr-8 h-20 bg-slate-100/50 dark:bg-white/[0.03] border border-primary-500/10 dark:border-white/10 rounded-2xl text-2xl font-black focus:border-primary-600 text-slate-900 dark:text-white outline-none transition-all placeholder:text-slate-400"
-                                            placeholder="0.00"
-                                        />
-                                    </div>
-                                    <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mt-6 flex items-center gap-3">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                        MAXIMUM LIQUIDITY: ₹{walletData.availableBalance.toLocaleString()}
-                                    </p>
-                                </div>
-
-                                {/* Bank Configuration */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-70">Banking Institution</label>
-                                        <input name="bankName" required className="w-full px-6 h-14 bg-slate-100/50 dark:bg-white/[0.02] border border-primary-500/10 dark:border-white/10 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] focus:border-primary-600 text-slate-900 dark:text-white outline-none placeholder:text-slate-400" placeholder="BANK NAME" />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-70">IFSC Credentials</label>
-                                        <input name="ifsc" required className="w-full px-6 h-14 bg-slate-100/50 dark:bg-white/[0.02] border border-primary-500/10 dark:border-white/10 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] focus:border-primary-600 text-slate-900 dark:text-white outline-none placeholder:text-slate-400" placeholder="IFSC CODE" />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-70">Target Account ID</label>
-                                        <input name="accountNumber" required className="w-full px-6 h-14 bg-slate-100/50 dark:bg-white/[0.02] border border-primary-500/10 dark:border-white/10 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] focus:border-primary-600 text-slate-900 dark:text-white outline-none placeholder:text-slate-400" placeholder="ACCOUNT NUMBER" />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-70">Legal Beneficiary</label>
-                                        <input name="accountHolderName" required className="w-full px-6 h-14 bg-slate-100/50 dark:bg-white/[0.02] border border-primary-500/10 dark:border-white/10 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] focus:border-primary-600 text-slate-900 dark:text-white outline-none placeholder:text-slate-400" placeholder="NAME AS PER BANK" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-70">Unified Payments Interface (UPI)</label>
-                                    <input name="upi" className="w-full px-6 h-14 bg-slate-100/50 dark:bg-white/[0.02] border border-primary-500/10 dark:border-white/10 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] focus:border-primary-600 text-slate-900 dark:text-white outline-none placeholder:text-slate-400" placeholder="USER@UPI" />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-6 pt-4">
-                                <Button
-                                    type="submit"
-                                    isLoading={withdrawLoading}
-                                    className="h-14 px-12 bg-red-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-red-500/20 hover:scale-105 active:scale-95 transition-all"
-                                >
-                                    Confirm Settlement
-                                </Button>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowWithdraw(false)}
-                                    className="h-14 px-10 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hover:text-slate-900 dark:hover:text-white transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Transaction History */}
-            <motion.div
-                variants={fadeIn}
-                initial="initial"
-                animate="animate"
-                className="glass-card rounded-3xl border border-white/5 shadow-2xl overflow-hidden"
-            >
-                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                    <h3 className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] flex items-center gap-3">
-                        <Clock size={16} className="text-primary-600" /> Transaction Logs
+            {/* Transactions */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                    <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Clock size={18} className="text-slate-400" /> Recent Transactions
                     </h3>
                 </div>
 
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-slate-100 dark:divide-slate-700">
                     {transactions.length > 0 ? (
-                        transactions.map((tx, idx) => {
+                        transactions.map((tx) => {
                             const style = getTransactionStyle(tx.type);
                             return (
-                                <motion.div
-                                    key={tx.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
-                                    className="p-6 hover:bg-white/[0.02] transition-colors group"
-                                >
-                                    <div className="flex justify-between items-center gap-8">
-                                        <div className="flex items-center gap-6 flex-1">
-                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${style.bgColor} ${style.textColor}`}>
+                                <div key={tx.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex items-start gap-4 flex-1">
+                                            <div className={`p-2 rounded-full ${style.bgColor} ${style.textColor}`}>
                                                 {style.icon}
                                             </div>
                                             <div className="flex-1">
-                                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                                                    <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.1em]">{tx.description || tx.type}</p>
-                                                    <div className="scale-90 origin-left">
-                                                        {getStatusBadge(tx.status)}
-                                                    </div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="font-medium text-slate-900 dark:text-white">{tx.description || tx.type}</p>
+                                                    {getStatusBadge(tx.status)}
                                                 </div>
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-60">
-                                                    {new Date(tx.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()} • {new Date(tx.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                <p className="text-xs text-slate-500">
+                                                    {new Date(tx.createdAt).toLocaleDateString('en-IN', {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
                                                 </p>
+                                                {tx.failureReason && (
+                                                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                                        Reason: {tx.failureReason}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className={`text-2xl md:text-3xl font-black tracking-tighter ${style.amountColor}`}>
-                                            {style.prefix}₹{Math.abs(tx.amount).toLocaleString()}
+                                        <div className={`font-bold ${style.amountColor}`}>
+                                            {style.prefix}₹{Math.abs(tx.amount).toFixed(2)}
                                         </div>
                                     </div>
-                                    {tx.failureReason && (
-                                        <div className="mt-6 p-4 bg-red-500/5 rounded-2xl border border-red-500/10 flex items-center gap-3">
-                                            <XCircle size={16} className="text-red-400" />
-                                            <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">
-                                                REJECTED: {tx.failureReason}
-                                            </p>
-                                        </div>
-                                    )}
-                                </motion.div>
+                                </div>
                             );
                         })
                     ) : (
-                        <div className="p-32 text-center">
-                            <Clock size={48} className="mx-auto text-slate-800 mb-6 opacity-30" />
-                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em]">No Assets Logged</p>
-                        </div>
+                        <div className="p-8 text-center text-slate-500 italic">No recent transactions</div>
                     )}
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 };

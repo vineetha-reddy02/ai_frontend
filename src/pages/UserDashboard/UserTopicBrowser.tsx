@@ -6,8 +6,6 @@ import { topicsService } from '../../services/topics';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../store/uiSlice';
 import UserTopicDetailsPage from './UserTopicDetailsPage';
-import { motion, AnimatePresence } from 'framer-motion';
-import { fadeIn, slideUp, buttonClick, cardHover, staggerContainer } from '../../constants/animations';
 
 const UserTopicBrowser: React.FC = () => {
     const navigate = useNavigate();
@@ -121,122 +119,77 @@ const UserTopicBrowser: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6 md:space-y-8">
-            <motion.div
-                variants={fadeIn}
-                initial="initial"
-                animate="animate"
-                className="flex items-center justify-between px-2 sm:px-0"
-            >
-                <div>
-                    <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-tight">
-                        TOPICS <span className="text-primary-600 dark:text-primary-400">PATH</span>
-                    </h3>
-                    <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1">
-                        Your roadmap to English fluency
-                    </p>
-                </div>
-            </motion.div>
+        <div className="space-y-4 md:space-y-6">
+            <div className="flex items-center justify-between px-2 sm:px-0">
+                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-slate-900 dark:text-white">
+                    Topics Path
+                </h3>
+            </div>
 
             {loading ? (
                 <div className="py-12 text-center text-slate-500">Loading topics...</div>
             ) : topics.length > 0 ? (
                 <div className="flex flex-col items-center max-w-2xl mx-auto px-2 sm:px-4">
                     {/* Progress Indicator */}
-                    <motion.div
-                        variants={slideUp}
-                        initial="initial"
-                        animate="animate"
-                        transition={{ delay: 0.1 }}
-                        className="w-full mb-8"
-                    >
-                        <div className="flex justify-between items-end mb-3">
-                            <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest">
-                                PROGRESS: {Math.round(((currentTopicIndex + 1) / topics.length) * 100)}%
-                            </span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                {currentTopicIndex + 1} / {topics.length} TOPICS
-                            </span>
+                    <div className="w-full mb-4 sm:mb-6">
+                        <div className="flex justify-between text-xs sm:text-sm text-slate-500 mb-2">
+                            <span>Topic {currentTopicIndex + 1} of {topics.length}</span>
+                            <span className="hidden xs:inline">{Math.round(((currentTopicIndex + 1) / topics.length) * 100)}% Progress</span>
+                            <span className="xs:hidden">{Math.round(((currentTopicIndex + 1) / topics.length) * 100)}%</span>
                         </div>
-                        <div className="w-full h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-primary-500/5">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${((currentTopicIndex + 1) / topics.length) * 100}%` }}
-                                className="h-full bg-primary-600 dark:bg-primary-500 transition-all duration-1000"
+                        <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-indigo-600 transition-all duration-300"
+                                style={{ width: `${((currentTopicIndex + 1) / topics.length) * 100}%` }}
                             />
                         </div>
-                    </motion.div>
+                    </div>
 
                     {/* Navigation Controls - Top */}
-                    <motion.div
-                        variants={fadeIn}
-                        initial="initial"
-                        animate="animate"
-                        transition={{ delay: 0.2 }}
-                        className="w-full flex justify-between items-center mb-8 gap-4"
-                    >
-                        <motion.button
-                            whileHover={currentTopicIndex !== 0 ? { x: -3 } : {}}
-                            whileTap={currentTopicIndex !== 0 ? { scale: 0.95 } : {}}
+                    <div className="w-full flex justify-between items-center mb-4 sm:mb-6 gap-2">
+                        <button
                             onClick={() => setCurrentTopicIndex(prev => Math.max(0, prev - 1))}
                             disabled={currentTopicIndex === 0}
-                            className={`min-h-[44px] px-6 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] border shadow-sm ${currentTopicIndex === 0
-                                ? 'text-slate-300 border-slate-100 dark:border-white/5 cursor-not-allowed'
-                                : 'text-primary-600 border-primary-500/10 dark:text-white dark:border-white/10 hover:bg-white dark:hover:bg-white/5'
+                            className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-all min-h-[44px] ${currentTopicIndex === 0
+                                ? 'text-slate-300 cursor-not-allowed'
+                                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
                                 }`}
                         >
-                            <span className="flex items-center gap-2">← PREV</span>
-                        </motion.button>
+                            <span className="hidden sm:inline">← Previous</span>
+                            <span className="sm:hidden">←</span>
+                        </button>
 
                         <div className="flex gap-2">
-                            <AnimatePresence mode="wait">
-                                {currentTopicIndex < unlockedIndex ? (
-                                    <motion.span
-                                        key="completed"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        className="inline-flex items-center px-4 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-[9px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest"
-                                    >
-                                        COMPLETED
-                                    </motion.span>
-                                ) : currentTopicIndex === unlockedIndex ? (
-                                    <motion.span
-                                        key="current"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        className="inline-flex items-center px-4 py-1 rounded-full bg-primary-500/10 border border-primary-500/20 text-[9px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest animate-pulse"
-                                    >
-                                        CURRENT
-                                    </motion.span>
-                                ) : (
-                                    <motion.span
-                                        key="locked"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        className="inline-flex items-center px-4 py-1 rounded-full bg-slate-500/10 border border-slate-500/20 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest"
-                                    >
-                                        LOCKED
-                                    </motion.span>
-                                )}
-                            </AnimatePresence>
+                            {currentTopicIndex < unlockedIndex ? (
+                                <span className="text-green-600 text-xs sm:text-sm font-medium flex items-center px-2 sm:px-3 py-1 bg-green-50 dark:bg-green-900/20 rounded-full">
+                                    <span className="hidden xs:inline">Completed</span>
+                                    <span className="xs:hidden">✓</span>
+                                </span>
+                            ) : currentTopicIndex === unlockedIndex ? (
+                                <span className="text-indigo-600 text-xs sm:text-sm font-medium flex items-center px-2 sm:px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-full animate-pulse">
+                                    <span className="hidden xs:inline">Current</span>
+                                    <span className="xs:hidden">●</span>
+                                </span>
+                            ) : (
+                                <span className="text-slate-400 text-xs sm:text-sm font-medium flex items-center px-2 sm:px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                                    <span className="hidden xs:inline">Locked</span>
+                                    <span className="xs:hidden">🔒</span>
+                                </span>
+                            )}
                         </div>
 
-                        <motion.button
-                            whileHover={!(currentTopicIndex >= unlockedIndex || currentTopicIndex === topics.length - 1) ? { x: 3 } : {}}
-                            whileTap={!(currentTopicIndex >= unlockedIndex || currentTopicIndex === topics.length - 1) ? { scale: 0.95 } : {}}
+                        <button
                             onClick={() => setCurrentTopicIndex(prev => Math.min(topics.length - 1, prev + 1))}
                             disabled={currentTopicIndex >= unlockedIndex || currentTopicIndex === topics.length - 1}
-                            className={`min-h-[44px] px-6 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] border shadow-sm ${currentTopicIndex >= unlockedIndex || currentTopicIndex === topics.length - 1
-                                ? 'text-slate-300 border-slate-100 dark:border-white/5 cursor-not-allowed'
-                                : 'text-primary-600 border-primary-500/10 dark:text-white dark:border-white/10 hover:bg-white dark:hover:bg-white/5'
+                            className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-all min-h-[44px] ${currentTopicIndex >= unlockedIndex || currentTopicIndex === topics.length - 1
+                                ? 'text-slate-300 cursor-not-allowed'
+                                : 'text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/20'
                                 }`}
                         >
-                            <span className="flex items-center gap-2">NEXT →</span>
-                        </motion.button>
-                    </motion.div>
+                            <span className="hidden sm:inline">Next →</span>
+                            <span className="sm:hidden">→</span>
+                        </button>
+                    </div>
 
                     {/* Current Topic Card */}
                     {(() => {
@@ -248,17 +201,12 @@ const UserTopicBrowser: React.FC = () => {
                         const isLocked = !isCompleted && currentTopicIndex > unlockedIndex;
 
                         return (
-                            <motion.div
-                                layout
-                                variants={slideUp}
-                                initial="initial"
-                                animate="animate"
-                                whileHover={!isLocked ? { y: -10, scale: 1.02 } : {}}
-                                className={`w-full group relative overflow-hidden glass-card rounded-[2.5rem] p-8 sm:p-12 border transition-all cursor-pointer ${isLocked
-                                    ? 'opacity-40 grayscale pointer-events-none'
+                            <div
+                                className={`w-full bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-6 md:p-8 border transition-all cursor-pointer ${isLocked
+                                    ? 'border-slate-200 dark:border-slate-700 opacity-75'
                                     : isCompleted
-                                        ? 'border-green-500/30'
-                                        : 'shadow-2xl'
+                                        ? 'border-green-200 dark:border-green-900/50 bg-green-50/10'
+                                        : 'border-indigo-100 dark:border-indigo-900/30 shadow-md transform hover:-translate-y-1'
                                     }`}
                                 onClick={() => {
                                     if (!isLocked) {
@@ -266,70 +214,60 @@ const UserTopicBrowser: React.FC = () => {
                                     }
                                 }}
                             >
-                                {/* Background Decorative Elements */}
-                                {!isLocked && (
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none group-hover:bg-primary-600/10 transition-colors" />
-                                )}
-
-                                <div className="flex justify-between items-start mb-10">
-                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 duration-500 ${isLocked
-                                        ? 'bg-slate-200 text-slate-400 dark:bg-white/5 dark:text-slate-600'
+                                <div className="flex justify-between items-start mb-4 sm:mb-6">
+                                    <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${isLocked
+                                        ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
                                         : isCompleted
-                                            ? 'bg-green-500 text-white shadow-green-500/20'
-                                            : 'bg-primary-600 text-white shadow-primary-500/20'
+                                            ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                            : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
                                         }`}>
-                                        {isCompleted ? <CheckCircle className="w-8 h-8" /> : <BookOpen className="w-8 h-8" />}
+                                        {isCompleted ? <CheckCircle className="w-6 h-6 sm:w-7 sm:h-7" /> : <BookOpen className="w-6 h-6 sm:w-7 sm:h-7" />}
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] border ${isLocked
-                                            ? 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400'
-                                            : 'bg-primary-500/5 border-primary-500/20 text-primary-600 dark:text-primary-400'
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-sm font-medium px-3 py-1 rounded-full ${isLocked
+                                            ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                                             }`}>
-                                            {topic.level || 'LEVEL: GENERAL'}
+                                            {topic.level || 'General'}
                                         </span>
                                         {!isLocked && (
-                                            <motion.button
-                                                whileHover={{ scale: 1.2, rotate: 15 }}
-                                                whileTap={{ scale: 0.9 }}
-                                                className={`p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 transition-colors border border-primary-500/5 ${topic.isFavorite ? 'text-amber-500' : 'text-slate-300'}`}
+                                            <button
+                                                className={`p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${topic.isFavorite ? 'text-yellow-500' : 'text-slate-300'}`}
                                                 onClick={(e) => toggleFavorite(e, topic)}
                                             >
                                                 <Star size={20} className={topic.isFavorite ? "fill-current" : ""} />
-                                            </motion.button>
+                                            </button>
                                         )}
                                     </div>
                                 </div>
 
-                                <h4 className={`text-3xl sm:text-5xl font-black mb-6 tracking-tighter leading-tight ${isLocked ? 'text-slate-300 dark:text-slate-800' : 'text-slate-900 dark:text-slate-50'
+                                <h4 className={`text-lg sm:text-xl md:text-2xl font-bold mb-2 sm:mb-3 ${isLocked ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-white'
                                     }`}>
-                                    {topic.title?.toUpperCase()}
+                                    {topic.title}
                                 </h4>
 
-                                <p className={`text-lg md:text-xl mb-12 line-clamp-3 leading-relaxed font-medium transition-colors ${isLocked ? 'text-slate-400 dark:text-slate-800' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200'
+                                <p className={`text-sm sm:text-base mb-6 sm:mb-8 line-clamp-2 sm:line-clamp-3 ${isLocked ? 'text-slate-400 dark:text-slate-600' : 'text-slate-500 dark:text-slate-400'
                                     }`}>
                                     {topic.description}
                                 </p>
 
-                                <div className="flex items-center justify-between pt-8 border-t border-primary-500/5">
+                                <div className="flex items-center justify-between">
                                     {isLocked ? (
-                                        <div className="flex items-center text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                                            <Lock size={16} className="mr-3" />
-                                            COMPLETE PREVIOUS TOPIC TO UNLOCK
+                                        <div className="flex items-center text-slate-400 text-xs sm:text-sm font-medium">
+                                            <Lock size={16} className="mr-2 flex-shrink-0" />
+                                            <span className="hidden sm:inline">Locked • Complete previous topic</span>
+                                            <span className="sm:hidden">Locked</span>
                                         </div>
                                     ) : (
-                                        <div className={`flex items-center text-xs font-black uppercase tracking-[0.3em] transition-all group-hover:gap-6 gap-4 ${isCompleted ? 'text-green-600' : 'text-primary-600 dark:text-primary-400'
+                                        <div className={`flex items-center text-sm sm:text-base font-semibold group cursor-pointer ${isCompleted ? 'text-green-600 dark:text-green-400' : 'text-indigo-600 dark:text-indigo-400'
                                             }`}>
-                                            <span>{isCompleted ? 'REVIEW CONTENT' : 'START JOURNEY'}</span>
-                                            <motion.span
-                                                animate={{ x: [0, 5, 0] }}
-                                                transition={{ repeat: Infinity, duration: 1.5 }}
-                                            >
-                                                →
-                                            </motion.span>
+                                            <span className="hidden sm:inline">{isCompleted ? 'Review Topic' : 'Start Learning'}</span>
+                                            <span className="sm:hidden">{isCompleted ? 'Review' : 'Start'}</span>
+                                            <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                                         </div>
                                     )}
                                 </div>
-                            </motion.div>
+                            </div>
                         );
                     })()}
                 </div>

@@ -23,20 +23,20 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     children,
     ...props
   }, ref) => {
-    const baseClasses = 'inline-flex items-center justify-center font-bold tracking-tight rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-primary-500/20 active:scale-[0.98] active:translate-y-0.5';
+    const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500';
 
     const variantClasses = {
-      primary: 'bg-primary-600 dark:bg-blue-600 text-white hover:bg-primary-700 dark:hover:bg-blue-500 shadow-lg shadow-primary-500/20 dark:shadow-blue-500/20 hover:shadow-xl active:bg-primary-800 dark:active:bg-blue-700',
-      secondary: 'bg-secondary-600 dark:bg-violet-600 text-white hover:bg-secondary-700 dark:hover:bg-violet-500 shadow-lg shadow-secondary-500/20 dark:shadow-violet-500/20 hover:shadow-xl active:bg-secondary-800 dark:active:bg-violet-700',
-      outline: 'border-2 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 hover:border-primary-500 dark:hover:border-blue-500 active:bg-slate-100 dark:active:bg-white/10',
-      ghost: 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 active:bg-slate-200 dark:active:bg-white/10',
-      danger: 'bg-red-600 dark:bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-500 shadow-lg shadow-red-500/20 dark:shadow-red-500/40 hover:shadow-xl active:bg-red-800',
+      primary: 'bg-primary-600 dark:bg-primary-700 text-white hover:bg-primary-700 dark:hover:bg-primary-600 active:bg-primary-800',
+      secondary: 'bg-secondary-600 dark:bg-secondary-700 text-white hover:bg-secondary-700 dark:hover:bg-secondary-600 active:bg-secondary-800',
+      outline: 'border-2 border-primary-600 dark:border-primary-400 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950 active:bg-primary-100',
+      ghost: 'text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-950 active:bg-primary-200',
+      danger: 'bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-600 active:bg-red-800',
     };
 
     const sizeClasses = {
-      sm: 'px-4 py-2 text-xs gap-2 rounded-lg',
-      md: 'px-6 py-3 text-sm gap-2.5 rounded-xl',
-      lg: 'px-8 py-4 text-base gap-3 rounded-2xl',
+      sm: 'px-3 py-2 text-sm gap-2',
+      md: 'px-4 py-2.5 text-base gap-2.5',
+      lg: 'px-6 py-3 text-lg gap-3',
     };
 
     const widthClass = fullWidth ? 'w-full' : '';

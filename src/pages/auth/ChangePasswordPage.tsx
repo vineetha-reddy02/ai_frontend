@@ -4,13 +4,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useDispatch } from 'react-redux';
-import { Lock, ArrowLeft, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Lock, ArrowLeft } from 'lucide-react';
 import Button from '../../components/Button';
 import { authService } from '../../services/auth';
 import { showToast } from '../../store/uiSlice';
 import { AppDispatch } from '../../store';
-import { motion, AnimatePresence } from 'framer-motion';
-import { fadeIn, slideUp } from '../../constants/animations';
 
 const changePasswordSchema = z
     .object({
@@ -18,14 +16,14 @@ const changePasswordSchema = z
         newPassword: z
             .string()
             .min(8, 'Password must be at least 8 characters')
-            .regex(/[A-Z]/, 'At least one uppercase required')
-            .regex(/[a-z]/, 'At least one lowercase required')
-            .regex(/[0-9]/, 'At least one number required')
-            .regex(/[!@#$%^&*]/, 'At least one special character required'),
+            .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+            .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+            .regex(/[0-9]/, 'Password must contain at least one number')
+            .regex(/[!@#$%^&*]/, 'Password must contain at least one special character (!@#$%^&*)'),
         confirmPassword: z.string(),
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
-        message: "Passwords do not match",
+        message: "Passwords don't match",
         path: ['confirmPassword'],
     });
 
@@ -52,11 +50,11 @@ const ChangePasswordPage: React.FC = () => {
     const newPasswordValue = watch('newPassword') || '';
 
     const passwordRequirements = [
-        { label: 'Min 8 Characters', met: newPasswordValue.length >= 8 },
-        { label: 'Uppercase Letter', met: /[A-Z]/.test(newPasswordValue) },
-        { label: 'Lowercase Letter', met: /[a-z]/.test(newPasswordValue) },
-        { label: 'Numeric Digit', met: /[0-9]/.test(newPasswordValue) },
-        { label: 'Special Symbol', met: /[!@#$%^&*]/.test(newPasswordValue) },
+        { label: 'At least 8 characters', met: newPasswordValue.length >= 8 },
+        { label: 'At least 1 uppercase letter', met: /[A-Z]/.test(newPasswordValue) },
+        { label: 'At least 1 lowercase letter', met: /[a-z]/.test(newPasswordValue) },
+        { label: 'At least 1 number', met: /[0-9]/.test(newPasswordValue) },
+        { label: 'At least 1 special character (!@#$%^&*)', met: /[!@#$%^&*]/.test(newPasswordValue) },
     ];
 
     const onSubmit = async (data: ChangePasswordFormData) => {
@@ -71,15 +69,15 @@ const ChangePasswordPage: React.FC = () => {
 
             dispatch(
                 showToast({
-                    message: 'Access Credentials Synchronized',
+                    message: 'Password changed successfully!',
                     type: 'success',
                 })
             );
 
             reset();
-            setTimeout(() => navigate(-1), 1000);
+            navigate(-1); // Go back to settings page
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message || 'Access synchronization failed';
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to change password';
             dispatch(showToast({ message: errorMessage, type: 'error' }));
         } finally {
             setIsLoading(false);
@@ -87,109 +85,127 @@ const ChangePasswordPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#030014] flex items-center justify-center p-6 relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,#2563eb15,transparent_70%)]" />
-
-            <motion.div
-                initial="initial" animate="animate" variants={fadeIn}
-                className="w-full max-w-lg relative z-10"
-            >
-                {/* Back Button */}
-                <Link
-                    to="/settings"
-                    className="w-12 h-12 flex items-center justify-center bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 text-white transition-all hover:bg-white/10 mb-8 group"
-                >
-                    <ArrowLeft size={20} className="transition-transform group-hover:-translate-x-1" />
-                </Link>
-
-                <div className="glass-card p-10 md:p-14 rounded-[3rem] relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+        <div className="min-h-dvh bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
+            <div className="w-full max-w-md">
+                <div className="card">
+                    {/* Back Button */}
+                    <Link
+                        to="/settings"
+                        className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-6 group"
+                    >
+                        <svg
+                            className="w-5 h-5 transition-transform group-hover:-translate-x-1"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        {/* <span className="text-sm font-medium">Back to Settings</span> */}
+                    </Link>
 
                     {/* Header */}
-                    <div className="flex items-center gap-6 mb-12">
-                        <div className="w-16 h-16 rounded-[1.5rem] bg-primary-600 flex items-center justify-center shadow-2xl shadow-primary-500/20">
-                            <Lock className="w-8 h-8 text-white" />
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary-600 to-secondary-600 flex items-center justify-center">
+                            <Lock className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-tight">
+                            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                                 Change Password
                             </h1>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1 opacity-70">
-                                Identity & Access Security Center
+                            <p className="text-slate-600 dark:text-slate-400 text-sm">
+                                Update your account password
                             </p>
                         </div>
                     </div>
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         {/* Current Password */}
-                        <div className="space-y-3">
-                            <label className="text-[11px] font-black text-white uppercase tracking-widest ml-1">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
                                 Current Password
                             </label>
-                            <div className="relative group">
+                            <div className="relative">
                                 <input
                                     {...register('currentPassword')}
                                     type={showCurrentPassword ? "text" : "password"}
-                                    className="w-full h-14 pl-6 pr-14 bg-white/5 border border-white/10 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary-600 focus:bg-white/10 transition-all font-bold text-sm tracking-widest"
-                                    placeholder="••••••••"
+                                    placeholder=""
+                                    className="w-full px-4 py-2.5 pr-12 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                    aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                                 >
-                                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    {showCurrentPassword ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    )}
                                 </button>
                             </div>
                             {errors.currentPassword && (
-                                <p className="text-red-500 text-[9px] font-black uppercase tracking-widest ml-1 animate-pulse">
-                                    {errors.currentPassword.message}
-                                </p>
+                                <p className="text-red-600 text-sm mt-1">{errors.currentPassword.message}</p>
                             )}
                         </div>
 
                         {/* New Password */}
-                        <div className="space-y-6">
-                            <div className="space-y-3">
-                                <label className="text-[11px] font-black text-white uppercase tracking-widest ml-1">
-                                    New Password
-                                </label>
-                                <div className="relative group">
-                                    <input
-                                        {...register('newPassword')}
-                                        type={showNewPassword ? "text" : "password"}
-                                        className="w-full h-14 pl-6 pr-14 bg-white/5 border border-white/10 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary-600 focus:bg-white/10 transition-all font-bold text-sm tracking-widest"
-                                        placeholder="••••••••"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowNewPassword(!showNewPassword)}
-                                        className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                                    >
-                                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                                {errors.newPassword && (
-                                    <p className="text-red-500 text-[9px] font-black uppercase tracking-widest ml-1 animate-pulse">
-                                        {errors.newPassword.message}
-                                    </p>
-                                )}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                                New Password
+                            </label>
+                            <div className="relative">
+                                <input
+                                    {...register('newPassword')}
+                                    type={showNewPassword ? "text" : "password"}
+                                    placeholder=""
+                                    className="w-full px-4 py-2.5 pr-12 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewPassword(!showNewPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showNewPassword ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    )}
+                                </button>
                             </div>
+                            {errors.newPassword && (
+                                <p className="text-red-600 text-sm mt-1">{errors.newPassword.message}</p>
+                            )}
 
-                            {/* Requirements Matrix */}
-                            <div className="grid grid-cols-2 gap-3 p-6 bg-white/5 rounded-[1.5rem] border border-white/5">
+                            <div className="mt-3 space-y-1.5 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
+                                <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">Password must contain:</p>
                                 {passwordRequirements.map((req, index) => (
-                                    <div key={index} className="flex items-center gap-3">
-                                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-all duration-500 ${req.met
-                                            ? 'bg-green-500 text-white shadow-lg shadow-green-500/20'
-                                            : 'bg-white/10 text-slate-600'
+                                    <div key={index} className="flex items-center gap-2">
+                                        <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${req.met
+                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-400'
                                             }`}>
-                                            <ShieldCheck size={12} className={req.met ? "scale-110" : "scale-100 opacity-40"} />
+                                            {req.met ? (
+                                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            ) : (
+                                                <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                                            )}
                                         </div>
-                                        <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-500 ${req.met
-                                            ? 'text-white'
-                                            : 'text-slate-600'
+                                        <span className={`text-xs ${req.met ? 'text-slate-600 dark:text-slate-300 line-through opacity-50' : 'text-slate-500 dark:text-slate-400'
                                             }`}>
                                             {req.label}
                                         </span>
@@ -198,46 +214,54 @@ const ChangePasswordPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Confirm Password */}
-                        <div className="space-y-3">
-                            <label className="text-[11px] font-black text-white uppercase tracking-widest ml-1">
-                                New Password
+                        {/* Confirm New Password */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                                Confirm New Password
                             </label>
-                            <div className="relative group">
+                            <div className="relative">
                                 <input
                                     {...register('confirmPassword')}
                                     type={showConfirmPassword ? "text" : "password"}
-                                    className="w-full h-14 pl-6 pr-14 bg-white/5 border border-white/10 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary-600 focus:bg-white/10 transition-all font-bold text-sm tracking-widest"
-                                    placeholder="••••••••"
+                                    placeholder=""
+                                    className="w-full px-4 py-2.5 pr-12 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                                 >
-                                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    {showConfirmPassword ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    )}
                                 </button>
                             </div>
                             {errors.confirmPassword && (
-                                <p className="text-red-500 text-[9px] font-black uppercase tracking-widest ml-1 animate-pulse">
-                                    {errors.confirmPassword.message}
-                                </p>
+                                <p className="text-red-600 text-sm mt-1">{errors.confirmPassword.message}</p>
                             )}
                         </div>
 
                         {/* Submit Button */}
-                        <div className="pt-6">
-                            <Button
-                                type="submit"
-                                isLoading={isLoading}
-                                className="h-10 w-40 rounded-xl bg-primary-600 text-white font-black uppercase tracking-[0.2em] text-[8px] shadow-2xl shadow-primary-500/30 hover:scale-[1.05] active:scale-95 transition-all mx-auto"
-                            >
-                                <ShieldCheck size={14} className="mr-2" /> SAVE
-                            </Button>
-                        </div>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            fullWidth
+                            isLoading={isLoading}
+                            className="mt-6"
+                        >
+                            Change Password
+                        </Button>
                     </form>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 };

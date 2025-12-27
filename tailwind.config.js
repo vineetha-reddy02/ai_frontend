@@ -29,35 +29,29 @@ export default {
       },
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6', // Vibrant Blue - Professional Primary
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        },
-        secondary: {
           50: '#f0f9ff',
           100: '#e0f2fe',
           200: '#bae6fd',
           300: '#7dd3fc',
           400: '#38bdf8',
-          500: '#2563eb', // Educational Blue - Professional Secondary
+          500: '#0ea5e9',
           600: '#0284c7',
           700: '#0369a1',
           800: '#075985',
-          900: '#0c4a6e',
+          900: '#0c3d66',
         },
-        accent: {
-          slate: '#475569',
-          info: '#3b82f6',
-          success: '#10b981',
-          warning: '#f59e0b',
-        }
+        secondary: {
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
+        },
       },
       fontSize: {
         xs: ['12px', '16px'],
@@ -66,10 +60,8 @@ export default {
         lg: ['18px', '28px'],
         xl: ['20px', '28px'],
         '2xl': ['24px', '32px'],
-        '3xl': ['28px', '36px'],
-        '4xl': ['32px', '40px'],
-        '5xl': ['36px', '44px'],
-        '6xl': ['40px', '48px'],
+        '3xl': ['30px', '36px'],
+        '4xl': ['36px', '40px'],
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

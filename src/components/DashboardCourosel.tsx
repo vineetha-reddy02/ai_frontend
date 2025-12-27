@@ -45,13 +45,13 @@ const DashboardCarousel: React.FC<DashboardCarouselProps> = ({
 
     return (
         <div
-            className="relative w-full max-w-full overflow-hidden rounded-[2rem] shadow-2xl group h-[250px] sm:h-[300px] md:h-[400px] mb-8 border border-white/10 dark:border-white/5"
+            className="relative w-full max-w-full overflow-hidden rounded-xl md:rounded-2xl shadow-xl group h-[200px] sm:h-[240px] md:h-[280px] mb-6 scrollbar-hide"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
             {/* Slides */}
             <div
-                className="flex transition-transform duration-1000 cubic-bezier(0.4, 0, 0.2, 1) h-full"
+                className="flex transition-transform duration-700 ease-in-out h-full"
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
                 {slides.map((slide) => (
@@ -64,19 +64,19 @@ const DashboardCarousel: React.FC<DashboardCarouselProps> = ({
                             alt={slide.title}
                             className="w-full h-full object-cover"
                         />
-                        {/* Gradient Overlay - Premium Multilayered */}
-                        <div className="absolute inset-0 bg-slate-900/40 p-6 sm:p-10 md:p-14 flex flex-col justify-end">
-                            <div className={`transform transition-all duration-1000 delay-200 ${currentIndex === slides.findIndex(s => s.id === slide.id) ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-                                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-3 text-white tracking-tighter uppercase leading-tight">
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent flex flex-col justify-end p-4 sm:p-6 md:p-10">
+                            <div className={`transform transition-all duration-700 delay-100 ${currentIndex === slides.findIndex(s => s.id === slide.id) ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+                                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1 md:mb-2 text-white drop-shadow-md">
                                     {slide.title}
                                 </h2>
-                                <p className="text-sm sm:text-base md:text-lg text-slate-300 mb-6 md:mb-8 max-w-2xl font-medium leading-relaxed drop-shadow-sm line-clamp-2">
+                                <p className="text-sm sm:text-base md:text-lg text-slate-100 mb-2 md:mb-4 max-w-2xl drop-shadow-sm line-clamp-2">
                                     {slide.description}
                                 </p>
                                 {slide.ctaText && (
-                                    <button className="bg-white text-slate-900 hover:bg-primary-600 hover:text-white px-8 py-3 rounded-2xl font-black transition-all hover:scale-105 shadow-xl flex items-center gap-3 text-[10px] uppercase tracking-[0.2em]">
+                                    <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 md:px-6 md:py-2 rounded-lg md:rounded-xl font-semibold transition-all hover:scale-105 shadow-lg flex items-center gap-2 text-xs md:text-sm">
                                         {slide.ctaText}
-                                        <ChevronRight size={14} />
+                                        <ChevronRight size={16} />
                                     </button>
                                 )}
                             </div>
@@ -85,32 +85,33 @@ const DashboardCarousel: React.FC<DashboardCarouselProps> = ({
                 ))}
             </div>
 
-            {/* Navigation Buttons - More visible and premium */}
+            {/* Navigation Buttons - Hidden on mobile, visible on hover on desktop */}
             <button
                 onClick={prevSlide}
-                className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-2xl backdrop-blur-xl transition-all opacity-0 group-hover:opacity-100 shadow-xl border border-white/20"
+                className="hidden md:block absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-1.5 md:p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 shadow-lg border border-white/10"
                 aria-label="Previous slide"
             >
-                <ChevronLeft size={24} />
+                <ChevronLeft size={18} className="md:w-5 md:h-5" />
             </button>
             <button
                 onClick={nextSlide}
-                className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-2xl backdrop-blur-xl transition-all opacity-0 group-hover:opacity-100 shadow-xl border border-white/20"
+                className="hidden md:block absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-1.5 md:p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 shadow-lg border border-white/10"
                 aria-label="Next slide"
             >
-                <ChevronRight size={24} />
+                <ChevronRight size={18} className="md:w-5 md:h-5" />
             </button>
 
-            {/* Indicators - Premium bar indicators */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
+            {/* Indicators */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                 {slides.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => goToSlide(index)}
-                        className={`transition-all duration-500 rounded-full border border-white/10 ${index === currentIndex
-                            ? 'w-3 h-3 bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] scale-110'
-                            : 'w-2 h-2 bg-white/30 hover:bg-white/50'
+                        className={`w-2 h-2 rounded-full transition-all duration-300 flex-shrink-0 block ${index === currentIndex
+                            ? 'bg-white opacity-100'
+                            : 'bg-white/50 hover:bg-white/70'
                             }`}
+                        style={{ aspectRatio: '1/1', minWidth: '8px', minHeight: '8px' }}
                         aria-label={`Go to slide ${index + 1}`}
                     />
                 ))}

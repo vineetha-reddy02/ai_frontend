@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, Star, Shield, Zap, AlertCircle, ArrowLeft, Tag, X, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, Star, Shield, Zap, AlertCircle, ArrowLeft, Tag, X } from 'lucide-react';
 import Button from '../../components/Button';
-import { motion, AnimatePresence } from 'framer-motion';
-import { fadeIn, slideUp, buttonClick } from '../../constants/animations';
 import { subscriptionsService } from '../../services/subscriptions';
 import { paymentsService } from '../../services/payments';
 import { couponsService } from '../../services/coupons';
@@ -12,6 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { showToast } from '../../store/uiSlice';
 import SwitchPlanModal from '../../components/SwitchPlanModal';
+import { useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/auth';
 import { useUsageLimits } from '../../hooks/useUsageLimits';
 
@@ -470,21 +469,21 @@ const UserSubscriptions: React.FC = () => {
             const errorMsg = errorData?.errors?.[0] || errorData?.messages?.[0] || errorData?.message || error.response?.data?.errors?.[0] || 'Invalid or expired coupon code';
             dispatch(showToast({ message: errorMsg, type: 'error' }));
         } finally {
-            setValidatingCoupon((prev: any) => ({ ...prev, [planId]: false }));
+            setValidatingCoupon(prev => ({ ...prev, [planId]: false }));
         }
     };
 
     const removeCoupon = (planId: string) => {
-        setAppliedCoupons((prev: any) => {
-            const next = { ...prev };
-            delete next[planId];
-            return next;
+        setAppliedCoupons(prev => {
+            const updated = { ...prev };
+            delete updated[planId];
+            return updated;
         });
         dispatch(showToast({ message: 'Coupon removed', type: 'info' }));
     };
 
     const toggleCouponInput = (planId: string) => {
-        setShowCouponInput((prev: any) => ({ ...prev, [planId]: !prev[planId] }));
+        setShowCouponInput(prev => ({ ...prev, [planId]: !prev[planId] }));
     };
 
     const calculateFinalPrice = (plan: any, coupon: any) => {
@@ -616,296 +615,325 @@ const UserSubscriptions: React.FC = () => {
     if (loading) return <div className="text-center py-12 text-slate-500">Loading plans...</div>;
 
     return (
-        <div className="space-y-10">
-            {/* Header Section */}
-            {!searchParams.get('tab') && (
-                <motion.div
-                    variants={fadeIn}
-                    initial="initial"
-                    animate="animate"
-                    className="flex flex-col md:flex-row items-center justify-between gap-6"
+        <div className="space-y-4 md:space-y-6 lg:space-y-8">
+            {/* Header */}
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4 px-2 sm:px-0">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="p-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-full transition-colors text-blue-600 dark:text-blue-400 min-h-[44px] min-w-[44px] flex items-center justify-center"
                 >
-                    <div className="flex items-center gap-8">
-                        <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => navigate(-1)}
-                            className="w-14 h-14 flex items-center justify-center bg-slate-100 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-primary-500/10 dark:border-white/10 text-slate-900 dark:text-white transition-all hover:bg-slate-200 dark:hover:bg-white/10 shadow-2xl"
-                        >
-                            <ArrowLeft size={24} />
-                        </motion.button>
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
-                                SUBSCRIPTION <span className="text-primary-600 dark:text-primary-400">MATRIX</span>
-                            </h1>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-2 opacity-70">
-                                Global Proficiency & Performance Standards
-                            </p>
-                        </div>
+                    <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">My Subscriptions</h1>
+            </div>
+            {/* Current Plan Status */}
+            {currentSub && (
+                <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg md:rounded-xl p-4 md:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+                    <div>
+                        <h3 className="text-sm md:text-base font-semibold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
+                            Current Plan: <span className="text-primary-600">{currentSub.planName || currentSub.plan?.name || 'Free Trial'}</span>
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-500">
+                            {['active', 'trialing', 'succeeded', 'year'].includes(currentSub.status?.toLowerCase()) ? 'Active' : 'Expired'} • Renews on {new Date(currentSub.endDate || currentSub.renewalDate).toLocaleDateString()}
+                        </p>
                     </div>
-                </motion.div>
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">Manage Subscription</Button>
+                </div>
             )}
 
-            {loading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                    <div className="w-16 h-16 border-4 border-primary-500/20 border-t-primary-600 rounded-full animate-spin mb-4" />
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Compiling Plan Data...</p>
-                </div>
-            ) : (
-                <div className="space-y-10">
-                    {currentSub && (
-                        <motion.div
-                            variants={slideUp}
-                            initial="initial"
-                            animate="animate"
-                            className="glass-card backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-primary-500/10 shadow-2xl relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+            {/* Plans Grid */}
+            <div className="px-2 sm:px-0">
+                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white mb-4 md:mb-6">Available Plans</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    {plans.length > 0 ? plans.map((plan) => {
+                        // Check if this is the Yearly Plan
+                        const isYearlyPlan = plan.name?.toLowerCase().includes('yearly') || plan.interval?.toLowerCase() === 'year';
 
-                            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-primary-600/10 rounded-2xl flex items-center justify-center">
-                                            <Shield className="text-primary-600" size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-tight">Active Subscription</h3>
-                                            <p className="text-[9px] font-black text-primary-600 uppercase tracking-widest mt-0.5 opacity-70">Authenticated Endpoint</p>
-                                        </div>
+                        // Logic to check if this is the user's current valid plan
+                        // Robust ID check: handle flat planId or nested plan.id
+                        const currentPlanId = currentSub?.planId || currentSub?.plan?.id || currentSub?.plan?._id;
+                        const thisPlanId = plan.id || plan._id;
+
+                        // Fallback to Name match if IDs don't match (useful for dev/test data inconsistencies)
+                        // If planName specific property is missing, check if it's explicitly a free trial
+                        const currentPlanName = currentSub?.planName || currentSub?.plan?.name;
+                        const isFreeTrial = currentSub?.isFreeTrial; // Check explicitly for free trial flag
+
+                        let isNameMatch = false;
+                        if (currentPlanName && plan.name) {
+                            isNameMatch = currentPlanName.toLowerCase() === plan.name.toLowerCase();
+                        } else if (isFreeTrial && plan.name?.toLowerCase().includes('free trial')) {
+                            // If no name but IS free trial, match the "Free Trial" plan
+                            isNameMatch = true;
+                        }
+
+                        // Debug log to help identify why match fails
+                        // console.log('Plan Match Debug:', { ... });
+
+                        const isCurrentPlan = currentPlanId === thisPlanId || isNameMatch;
+                        const isSubActive = ['active', 'trialing', 'succeeded', 'year'].includes(currentSub?.status?.toLowerCase());
+                        const isLocked = isCurrentPlan && isSubActive;
+
+                        return (
+                            <div key={plan.id || plan._id} className={`relative rounded-xl md:rounded-2xl p-4 md:p-6 transition-all duration-300 flex flex-col h-full ${isYearlyPlan
+                                ? 'border-2 border-blue-500 bg-gradient-to-br from-blue-50 via-blue-50/50 to-white dark:from-blue-950/40 dark:via-blue-900/20 dark:to-slate-800 shadow-[0_10px_40px_rgba(59,130,246,0.2)]'
+                                : isLocked
+                                    // Current Plan Style: Green/Primary border, glowing effect, slightly raised
+                                    ? 'border-2 border-green-500 ring-4 ring-green-500/10 dark:ring-green-500/20 bg-green-50/30 dark:bg-green-900/10 shadow-xl md:scale-[1.02] z-10'
+                                    // Default Style
+                                    : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-xl md:hover:-translate-y-1'
+                                }`}>
+
+                                {/* Badge for Current Active Plan */}
+                                {isLocked && (
+                                    <div className="absolute -top-3 md:-top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white text-xs md:text-sm font-bold px-3 md:px-4 py-1 md:py-1.5 rounded-full shadow-lg flex items-center gap-1 md:gap-2 z-20 whitespace-nowrap">
+                                        <Check size={12} className="md:w-3.5 md:h-3.5 stroke-[3]" />
+                                        <span>Active Plan</span>
                                     </div>
-                                    <div>
-                                        <h4 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight uppercase leading-tight">
-                                            {currentSub.plan?.name || currentSub.planName || 'Master Access'}
-                                        </h4>
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mt-3 flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                            STATUS: {currentSub.status?.toUpperCase() || 'ACTIVE'} • RENEWS {new Date(currentSub.renewalDate || currentSub.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}
-                                        </p>
+                                )}
+
+                                {/* Popular Badge for Yearly Plan (Hide if it's also the current plan to avoid badge overlap, or offset it) */}
+                                {isYearlyPlan && !isLocked && (
+                                    <div className="absolute -top-3 md:-top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-xs md:text-sm font-bold px-3 md:px-5 py-1 md:py-2 rounded-full shadow-xl flex items-center gap-1 md:gap-2 z-10">
+                                        <Star size={14} className="md:w-4 md:h-4 fill-white" />
+                                        <span>Popular Plan</span>
                                     </div>
+                                )}
+
+                                <div className="mt-2"> {/* Spacer for badges */}
+                                    <h4 className={`text-base md:text-lg font-bold mb-2 ${isYearlyPlan ? 'text-blue-900 dark:text-blue-100' : isLocked ? 'text-green-900 dark:text-green-100' : 'text-slate-900 dark:text-white'}`}>
+                                        {plan.name}
+                                    </h4>
                                 </div>
-                                <div className="text-center md:text-right space-y-4">
-                                    <p className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
-                                        ₹{currentSub.amount || '0.00'}
-                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-2">/ {currentSub.plan?.interval || 'mo'}</span>
-                                    </p>
-                                    <div className="flex justify-center md:justify-end">
-                                        <span className="px-5 py-2 bg-white/5 backdrop-blur-md rounded-xl text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border border-white/5">
-                                            Premium Identity Verified
-                                        </span>
-                                    </div>
+                                <div className="flex items-baseline mb-3 md:mb-4">
+                                    <span className={`text-2xl md:text-3xl font-bold ${isYearlyPlan ? 'text-blue-900 dark:text-blue-100' : 'text-slate-900 dark:text-white'}`}>
+                                        ₹{plan.price}
+                                    </span>
+                                    <span className={`text-xs md:text-sm ${isYearlyPlan ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500'}`}>
+                                        /{plan.interval || 'month'}
+                                    </span>
                                 </div>
-                            </div>
-                        </motion.div>
-                    )}
 
-                    {/* Plans Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pb-10">
-                        {plans.map((plan, index) => {
-                            const isCurrentPlan = currentSub && (plan.id === currentSub.planId || plan._id === currentSub.planId);
-                            const isSubActive = ['active', 'trialing', 'succeeded', 'year'].includes(currentSub?.status?.toLowerCase() || '');
-                            const isFreeTrial = currentSub?.planName?.toLowerCase().includes('free') || currentSub?.plan?.name?.toLowerCase().includes('free');
-                            const isLocked = isCurrentPlan && isSubActive;
-                            const isYearlyPlan = plan.interval?.toLowerCase().includes('year');
+                                <p className={`text-sm mb-6 min-h-[40px] ${isYearlyPlan ? 'text-blue-800 dark:text-blue-200' : 'text-slate-600 dark:text-slate-400'}`}>
+                                    {plan.description}
+                                </p>
 
-                            return (
-                                <motion.div
-                                    key={plan.id || plan._id}
-                                    variants={fadeIn}
-                                    initial="initial"
-                                    animate="animate"
-                                    transition={{ delay: index * 0.1 }}
-                                    whileHover={{ y: -10, scale: 1.02 }}
-                                    className={`relative flex flex-col p-5 md:p-6 rounded-3xl border transition-all duration-500 h-full ${isYearlyPlan && !isLocked
-                                        ? 'bg-slate-900 border-primary-500/30 shadow-2xl shadow-primary-500/20'
-                                        : isLocked
-                                            ? 'glass-panel border-primary-500 shadow-[0_0_50px_rgba(15,23,42,0.1)]'
-                                            : 'glass-card border-white/10 shadow-xl'
-                                        }`}
-                                >
-                                    {isYearlyPlan && !isLocked && (
-                                        <div className="absolute top-6 right-8 px-5 py-2 bg-[#433355] rounded-xl text-[9px] font-black text-white uppercase tracking-[0.2em] shadow-xl shadow-[#433355]/30">
-                                            ELITE VALUE
-                                        </div>
-                                    )}
+                                <ul className="space-y-3 mb-8 flex-1">
+                                    {plan.features && Object.keys(plan.features).length > 0 ? (
+                                        Object.entries(plan.features)
+                                            .map(([key, value]: [string, any], i: number) => {
+                                                // 1. Check Key Names
+                                                const lowerKey = key.toLowerCase();
+                                                if (['priority', '_id', 'createdat', 'updatedat', '__v', 'id', 'subscriptions'].includes(lowerKey)) return null;
 
-                                    <div className="flex flex-col flex-1">
-                                        <div className="space-y-6 mb-6">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isYearlyPlan && !isLocked ? 'bg-white text-primary-600' : 'bg-primary-600/10 text-primary-600'}`}>
-                                                {isYearlyPlan ? <Star size={28} /> : plan.price === 0 ? <Zap size={28} /> : <Shield size={28} />}
-                                            </div>
-                                            <div>
-                                                <h4 className={`text-xl font-semibold tracking-tight uppercase ${isYearlyPlan && !isLocked ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                                                    {plan.name}
-                                                </h4>
-                                                <div className="flex items-baseline mt-3">
-                                                    <span className={`text-2xl md:text-3xl font-semibold tracking-tight ${isYearlyPlan && !isLocked ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                                                        ₹{plan.price}
-                                                    </span>
-                                                    <span className="ml-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                                                        / {plan.interval || 'month'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                                // 2. Resolve Display Value
+                                                let displayValue = typeof value === 'string' ? value : (value?.value || value?.text);
 
-                                        <p className="text-[10px] font-medium mb-6 leading-relaxed text-slate-500 dark:text-slate-400 uppercase tracking-wide opacity-80">
-                                            {plan.description}
-                                        </p>
+                                                // 3. Check Resolved Value
+                                                if (!displayValue) return null;
+                                                if (typeof displayValue !== 'string') {
+                                                    if (typeof displayValue === 'number' || typeof displayValue === 'boolean') return null;
+                                                    displayValue = String(displayValue);
+                                                }
 
-                                        <ul className="space-y-4 mb-8 flex-1">
-                                            {plan.features && Object.keys(plan.features).length > 0 ? (
-                                                Object.entries(plan.features)
-                                                    .map(([key, value]: [string, any], i: number) => {
-                                                        const lowerKey = key.toLowerCase();
-                                                        if (['priority', '_id', 'createdat', 'updatedat', '__v', 'id', 'subscriptions'].includes(lowerKey)) return null;
-                                                        let displayValue = typeof value === 'string' ? value : (value?.value || value?.text);
-                                                        if (!displayValue || typeof displayValue !== 'string') return null;
-                                                        const lowerVal = displayValue.toLowerCase().trim();
-                                                        if (lowerVal === 'true' || lowerVal === 'false' || !isNaN(Number(displayValue))) return null;
-
-                                                        return (
-                                                            <li key={i} className="flex items-start gap-4">
-                                                                <div className="mt-0.5 flex-shrink-0 text-primary-600">
-                                                                    <CheckCircle size={14} />
-                                                                </div>
-                                                                <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400 leading-tight">
-                                                                    {displayValue}
-                                                                </span>
-                                                            </li>
-                                                        );
-                                                    })
-                                            ) : (
-                                                <li className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Specifications Classified</li>
-                                            )}
-                                        </ul>
-
-                                        {/* Dynamic Action Button */}
-                                        <div className="mt-auto pt-8 border-t border-primary-500/10">
-                                            {(() => {
-                                                const planId = plan.id || plan._id;
-                                                const appliedCoupon = appliedCoupons[planId];
-                                                const showInput = showCouponInput[planId];
-                                                const isValidating = validatingCoupon[planId];
+                                                // 4. Content Checks
+                                                const lowerVal = displayValue.toLowerCase().trim();
+                                                if (lowerVal === 'true' || lowerVal === 'false') return null;
+                                                if (!isNaN(Number(displayValue))) return null;
 
                                                 return (
-                                                    <div className="space-y-6">
-                                                        {!isLocked && (
-                                                            <div className="space-y-4">
-                                                                {!appliedCoupon ? (
-                                                                    <div className="space-y-3">
-                                                                        <button
-                                                                            onClick={() => toggleCouponInput(planId)}
-                                                                            className="text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary-600 hover:opacity-80 transition-opacity"
-                                                                        >
-                                                                            <Tag size={12} />
-                                                                            {showInput ? 'DISABLE OVERRIDE' : 'APPLY VOUCHER'}
-                                                                        </button>
-                                                                        {showInput && (
-                                                                            <div className="flex gap-2">
-                                                                                <input
-                                                                                    type="text"
-                                                                                    placeholder="VOUCHER KEY"
-                                                                                    value={couponCode}
-                                                                                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                                                                                    className="flex-1 px-4 h-12 bg-slate-100/50 dark:bg-white/5 rounded-xl border border-primary-500/10 dark:border-white/10 text-[10px] font-black uppercase tracking-widest focus:border-[#433355] text-slate-900 dark:text-white outline-none placeholder:text-slate-500/50"
-                                                                                />
-                                                                                <Button
-                                                                                    size="sm"
-                                                                                    onClick={() => validateAndApplyCoupon(plan, couponCode)}
-                                                                                    className="h-12 px-6 rounded-xl bg-primary-600 text-white font-black text-[9px] uppercase tracking-[0.2em] shadow-lg shadow-primary-500/20"
-                                                                                    isLoading={isValidating}
-                                                                                >
-                                                                                    DEPLOY
-                                                                                </Button>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-between">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white">
-                                                                                <Tag size={16} />
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">{appliedCoupon.code}</p>
-                                                                                <p className="text-[10px] font-black text-green-500/60 uppercase">DEDUCTED</p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <button onClick={() => removeCoupon(planId)} className="text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-all">
-                                                                            <X size={16} />
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-
-                                                                {appliedCoupon && (
-                                                                    <div className="flex justify-between items-center py-5 border-y border-white/5">
-                                                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">FINAL RATE:</span>
-                                                                        <span className="text-3xl font-black text-green-500 tracking-tighter">₹{calculateFinalPrice(plan, appliedCoupon).toFixed(0)}</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        <Button
-                                                            size="md"
-                                                            className={`w-full h-11 rounded-xl font-bold uppercase tracking-[0.2em] text-[10px] shadow-lg transition-all ${isLocked
-                                                                ? 'bg-primary-600 text-white shadow-primary-500/20 cursor-default'
-                                                                : 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-500/30 hover:scale-[1.02]'
-                                                                }`}
-                                                            disabled={false}
-                                                            onClick={() => {
-                                                                const isFreePlanCard = plan.name?.toLowerCase().includes('free');
-                                                                const isTrialExpiredByTime = user?.trialEndDate && new Date() > new Date(user.trialEndDate);
-                                                                const hasActivePaidSubscription = isSubActive && !isFreeTrial;
-                                                                const hasActiveFreeTrialSubscription = isSubActive && isFreeTrial;
-                                                                const isPlanUsed = isFreePlanCard && (
-                                                                    hasActivePaidSubscription ||
-                                                                    hasActiveFreeTrialSubscription ||
-                                                                    isExplicitlyCancelled ||
-                                                                    isTrialExpiredByTime ||
-                                                                    (!isSubActive && (user?.subscriptionStatus === 'cancelled' || user?.subscriptionStatus === 'expired'))
-                                                                );
-
-                                                                if (isLocked) {
-                                                                    dispatch(showToast({ message: "ACTIVE STATUS: You are currently utilizing this subscription tier.", type: "info" }));
-                                                                    return;
-                                                                }
-                                                                if (isPlanUsed) {
-                                                                    dispatch(showToast({
-                                                                        message: "QUOTA EXHAUSTED: You have already utilized this Free Access tier.",
-                                                                        type: "warning"
-                                                                    }));
-                                                                    return;
-                                                                }
-                                                                handleSubscribe(plan);
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center justify-center gap-3">
-                                                                {isLocked && <CheckCircle size={14} />}
-                                                                {isLocked ? 'ACTIVE PLAN' : 'UPGRADE NOW'}
-                                                            </div>
-                                                        </Button>
-                                                    </div>
+                                                    <li key={i} className={`flex items-start gap-3 text-sm ${isYearlyPlan ? 'text-blue-800 dark:text-blue-200' : 'text-slate-600 dark:text-slate-300'}`}>
+                                                        <Check size={16} className={`mt-0.5 flex-shrink-0 ${isYearlyPlan ? 'text-blue-600' : 'text-green-500'}`} />
+                                                        <span>{displayValue}</span>
+                                                    </li>
                                                 );
-                                            })()}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+                                            })
+                                    ) : (
+                                        <li className="text-sm text-slate-500 italic">No features listed</li>
+                                    )}
+                                </ul>
 
+                                {/* Coupon Section */}
+                                {(() => {
+                                    const planId = plan.id || plan._id;
+                                    const appliedCoupon = appliedCoupons[planId];
+                                    const isValidating = validatingCoupon[planId];
+                                    const showInput = showCouponInput[planId];
+
+                                    return (
+                                        <div className="mb-4 md:mb-6 border-t border-slate-200 dark:border-slate-700 pt-3 md:pt-4">
+                                            {/* Hide coupon section for active/locked plans */}
+                                            {!isLocked && (
+                                                <>
+                                                    {!appliedCoupon ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => toggleCouponInput(planId)}
+                                                                className="text-xs md:text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 md:gap-1.5 mb-2 min-h-[44px] md:min-h-0"
+                                                            >
+                                                                <Tag size={14} className="md:w-3.5 md:h-3.5" />
+                                                                {showInput ? 'Hide coupon' : 'Have a coupon code?'}
+                                                            </button>
+
+                                                            {showInput && (
+                                                                <div className="flex flex-col sm:flex-row gap-2 animate-in slide-in-from-top-2">
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Enter code"
+                                                                        value={couponCode}
+                                                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                                                        onKeyPress={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                validateAndApplyCoupon(plan, couponCode);
+                                                                            }
+                                                                        }}
+                                                                        className="flex-1 px-3 py-2.5 md:py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] md:min-h-0"
+                                                                    />
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => validateAndApplyCoupon(plan, couponCode)}
+                                                                        isLoading={isValidating}
+                                                                        disabled={!couponCode.trim() || isValidating}
+                                                                    >
+                                                                        Apply
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className="space-y-3">
+                                                            {/* Applied Coupon Badge */}
+                                                            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="p-1.5 bg-green-100 dark:bg-green-900/40 rounded-full">
+                                                                        <Tag size={14} className="text-green-600 dark:text-green-400" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+                                                                            {appliedCoupon.code}
+                                                                        </p>
+                                                                        <p className="text-xs text-green-600 dark:text-green-400">
+                                                                            Coupon applied!
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => removeCoupon(planId)}
+                                                                    className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-full transition-colors"
+                                                                    title="Remove coupon"
+                                                                >
+                                                                    <X size={16} className="text-red-500" />
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Price Breakdown */}
+                                                            <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                                                                <div className="flex justify-between items-center text-sm">
+                                                                    <span className="text-slate-600 dark:text-slate-400">Original Price:</span>
+                                                                    <span className="text-slate-900 dark:text-white line-through">₹{plan.price}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center text-sm">
+                                                                    <span className="text-green-600 dark:text-green-400">Discount:</span>
+                                                                    <span className="text-green-600 dark:text-green-400 font-semibold">
+                                                                        -{appliedCoupon.discountType === 'Percentage' || appliedCoupon.discountType === 1
+                                                                            ? `${appliedCoupon.discountValue}%`
+                                                                            : `₹${appliedCoupon.discountValue}`}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center pt-2 border-t border-slate-300 dark:border-slate-600">
+                                                                    <span className="font-bold text-slate-900 dark:text-white">Final Price:</span>
+                                                                    <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                                                                        ₹{calculateFinalPrice(plan, appliedCoupon).toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {(() => {
+                                    // Determine Button Text & State
+                                    let buttonText = isLocked ? 'Current Plan' : isCurrentPlan ? 'Renew Plan' : 'Choose Plan';
+                                    let isDisabled = isLocked;
+
+                                    // Special Handling for Free Trial Plan
+                                    // If name matches "Free", and user is strictly locked out (cancelled/expired), mark as used/expired
+                                    const isFreePlanCard = plan.name?.toLowerCase().includes('free');
+
+                                    // Check if trial has expired by time (24-hour period passed)
+                                    const isTrialExpiredByTime = user?.trialEndDate && new Date() > new Date(user.trialEndDate);
+
+                                    // Check if user has an active PAID subscription (not free trial)
+                                    const hasActivePaidSubscription = isSubActive && !isFreeTrial;
+
+                                    // Check if this Free Trial card and user currently has Free Trial active
+                                    const hasActiveFreeTrialSubscription = isSubActive && isFreeTrial;
+
+                                    // Comprehensive check: Plan is used if:
+                                    // 1. User has an active paid subscription (can't go back to free trial)
+                                    // 2. User already has active free trial (can't use it again)
+                                    // 3. User explicitly cancelled
+                                    // 4. Trial period expired (24 hours)
+                                    // 5. Subscription status is cancelled/expired
+                                    const isPlanUsed = isFreePlanCard && (
+                                        hasActivePaidSubscription ||
+                                        hasActiveFreeTrialSubscription ||
+                                        isExplicitlyCancelled ||
+                                        isTrialExpiredByTime ||
+                                        (!isSubActive && (user?.subscriptionStatus === 'cancelled' || user?.subscriptionStatus === 'expired'))
+                                    );
+
+                                    if (isPlanUsed) {
+                                        buttonText = 'Plan Used';
+                                        // User requested it to be clickable and show a popup
+                                        isDisabled = false;
+                                    }
+
+                                    return (
+                                        <Button
+                                            variant={isLocked ? 'outline' : isYearlyPlan ? 'primary' : 'primary'}
+                                            className={`w-full mt-auto ${isYearlyPlan && !isLocked ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg' : ''}`}
+                                            disabled={isDisabled}
+                                            onClick={() => {
+                                                if (isPlanUsed) {
+                                                    dispatch(showToast({
+                                                        message: "Plan used. You have already used your Free Trial. Please choose a premium plan to continue.",
+                                                        type: "warning"
+                                                    }));
+                                                    return;
+                                                }
+                                                handleSubscribe(plan);
+                                            }}
+                                        >
+                                            {buttonText}
+                                        </Button>
+                                    );
+                                })()}
+                            </div>
+                        )
+                    }) : (
+                        <div className="col-span-full py-12 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                            <p className="text-slate-500">No subscription plans available right now.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+
+            {/* Switch Plan Modal */}
             <SwitchPlanModal
                 isOpen={switchModalOpen}
                 onClose={() => setSwitchModalOpen(false)}
-                currentPlanName={currentSub?.planName || currentSub?.plan?.name || 'Standard'}
-                newPlanName={pendingPlan?.name || 'Elite'}
+                currentPlanName={currentSub?.planName || currentSub?.plan?.name || 'Current Plan'}
+                newPlanName={pendingPlan?.name || 'New Plan'}
                 onConfirm={handleConfirmSwitch}
                 isLoading={processingSwitch}
             />
-        </div>
+        </div >
     );
 };
 

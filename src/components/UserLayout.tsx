@@ -4,13 +4,20 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LogOut,
     Settings,
+    Wallet,
     Users,
     User,
     Ticket,
-    ChevronDown
+    Home,
+    Moon,
+    Sun,
+    BookOpen,
+    Mic,
+    Menu
 } from 'lucide-react';
 import type { RootState, AppDispatch } from '../store';
 import { logout } from '../store/authSlice';
+import { toggleTheme } from '../store/uiSlice';
 import { closeRatingModal } from '../store/callSlice';
 import OnlineStatusIndicator from './OnlineStatusIndicator';
 import TrialTimer from './TrialTimer';
@@ -19,9 +26,6 @@ import { useUsageLimits } from '../hooks/useUsageLimits';
 import { LanguageSelector } from './common/LanguageSelector';
 import { Logo } from './common/Logo';
 import callsService from '../services/calls';
-import { ThemeToggle } from './common/ThemeToggle';
-import { motion, AnimatePresence } from 'framer-motion';
-
 
 interface UserLayoutProps {
     children: React.ReactNode;
@@ -32,6 +36,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useSelector((state: RootState) => state.auth);
+    const { theme } = useSelector((state: RootState) => state.ui);
     const { showRatingModal, lastCompletedCall } = useSelector((state: RootState) => state.call);
 
     const [profileOpen, setProfileOpen] = useState(false);
@@ -77,6 +82,8 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     }, [profileOpen]);
 
     const menuItems = [
+        { icon: <Home size={18} />, label: 'Dashboard', path: '/dashboard' },
+        { icon: <Wallet size={18} />, label: 'Wallet', path: '/wallet' },
         { icon: <Ticket size={18} />, label: 'Subscriptions', path: '/subscriptions' },
         { icon: <Users size={18} />, label: 'Referrals', path: '/referrals' },
         { icon: <User size={18} />, label: 'Profile', path: '/profile' },
@@ -84,14 +91,9 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     ];
 
     return (
-        <div className="min-h-dvh flex flex-col relative overflow-hidden bg-[var(--bg-primary)]">
-            {/* Background Decorative Elements - Dynamic Glows */}
-            <div className="absolute top-0 left-0 w-full h-full -z-10 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary-500/10 dark:bg-primary-600/20 rounded-full blur-[160px] animate-pulse" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent-violet/10 dark:bg-accent-violet/20 rounded-full blur-[160px]" />
-            </div>
+        <div className="min-h-dvh bg-slate-50 dark:bg-slate-950 flex flex-col">
             {/* Header */}
-            <header className="sticky top-0 z-40 glass-panel border-b border-secondary-400 dark:border-white/5">
+            <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-14 md:h-16">
                         {/* Logo */}
@@ -100,7 +102,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                         </div>
 
                         {/* Right Actions */}
-                        <div className="flex items-center gap-2 md:gap-4 h-full">
+                        <div className="flex items-center gap-2 md:gap-4">
                             {/* Trial/Plan Status */}
                             {isExplicitlyCancelled ? (
                                 <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full animate-pulse">
@@ -127,119 +129,91 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                             )}
 
                             {/* Theme Toggle */}
-                            <ThemeToggle />
+                            <button
+                                onClick={() => dispatch(toggleTheme())}
+                                className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                aria-label="Toggle theme"
+                            >
+                                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                            </button>
 
                             {/* Language Selector */}
                             <LanguageSelector />
 
                             {/* Profile Dropdown */}
-                            <div className="h-full flex items-center relative" ref={profileRef}>
+                            <div className="relative" ref={profileRef}>
                                 <button
                                     onClick={() => setProfileOpen(!profileOpen)}
                                     className="flex items-center gap-2 focus:outline-none relative min-h-[44px] min-w-[44px]"
                                 >
-                                    <div className="relative flex items-center gap-2 bg-slate-100/50 dark:bg-white/5 pl-1 pr-3 py-1 rounded-full border border-slate-200 dark:border-white/5 hover:bg-white dark:hover:bg-white/10 transition-all">
-                                        <div className="relative">
-                                            <img
-                                                src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'User')}`}
-                                                alt="Profile"
-                                                className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 dark:border-white/10"
-                                            />
-                                            <OnlineStatusIndicator />
-                                        </div >
-                                        <ChevronDown size={14} className={`text-slate-500 transition-transform duration-300 ${profileOpen ? 'rotate-180' : ''}`} />
-                                    </div >
-                                </button >
+                                    <div className="relative">
+                                        <img
+                                            src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'User')}`}
+                                            alt="Profile"
+                                            className="w-9 h-9 md:w-10 md:h-10 rounded-full border border-slate-200 dark:border-slate-700"
+                                        />
+                                        <OnlineStatusIndicator />
+                                    </div>
+                                </button>
 
-                                <AnimatePresence>
-                                    {profileOpen && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                            className="absolute right-0 top-full mt-3 w-[min(calc(100vw-2rem),16rem)] md:w-64 glass-card rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] py-3 z-[100] overflow-hidden border border-white/20 origin-top-right backdrop-blur-2xl bg-white/90 dark:bg-slate-900/95"
-                                        >
-                                            {/* Decorative Arrow */}
-                                            <div className="absolute top-0 right-6 w-3 h-3 bg-white/90 dark:bg-slate-900/95 border-l border-t border-white/20 -translate-y-1.5 rotate-45 z-[1]" />
+                                {profileOpen && (
+                                    <div className="absolute right-0 mt-2 w-56 md:w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-2 z-50">
+                                        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 mb-2">
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                                {user?.fullName}
+                                            </p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                                {user?.email}
+                                            </p>
+                                        </div>
 
-                                            <div className="px-6 py-2 border-b border-primary-500/10 mb-2 relative z-[2]">
-                                                <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-80">
-                                                    Identity & Access Center
-                                                </span>
-                                            </div>
-
-                                            <div className="px-6 py-3 mb-2 flex items-center gap-4 relative z-[2]">
-                                                <img
-                                                    src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'User')}`}
-                                                    alt="Profile"
-                                                    className="w-10 h-10 rounded-xl border border-white/20 shadow-lg object-cover"
-                                                />
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-black text-primary-500 uppercase tracking-tighter italic truncate">
-                                                        {user?.fullName}
-                                                    </p>
-                                                    <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5 opacity-60">
-                                                        Authorized Session
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="max-h-[60vh] overflow-y-auto px-2 space-y-0.5 relative z-[2]">
-                                                {menuItems.map((item) => (
-                                                    <button
-                                                        key={item.path}
-                                                        onClick={() => {
-                                                            setProfileOpen(false);
-                                                            navigate(item.path);
-                                                        }}
-                                                        className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-[10px] transition-all duration-300 rounded-xl group/item min-h-[44px] uppercase tracking-[0.15em] font-black ${location.pathname === item.path
-                                                            ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 border border-primary-500/10'
-                                                            : 'text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-500/5 border border-transparent hover:border-primary-500/10'
-                                                            }`}
-                                                    >
-                                                        <span className={`transition-transform duration-300 ${location.pathname === item.path ? 'scale-110' : 'group-hover/item:scale-110 opacity-70'}`}>
-                                                            {item.icon}
-                                                        </span>
-                                                        <span className="truncate">{item.label}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            <div className="mt-2 px-2 border-t border-primary-500/10 pt-2 pb-1 relative z-[2]">
+                                        <div className="max-h-[60vh] overflow-y-auto">
+                                            {menuItems.map((item) => (
                                                 <button
-                                                    onClick={() => { setProfileOpen(false); handleLogout(); }}
-                                                    className="w-full text-left flex items-center justify-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-red-500 hover:bg-red-500/10 rounded-xl transition-all group/logout min-h-[44px] border border-transparent hover:border-red-500/10"
+                                                    key={item.path}
+                                                    onClick={() => {
+                                                        setProfileOpen(false);
+                                                        navigate(item.path);
+                                                    }}
+                                                    className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[44px]"
                                                 >
-                                                    <LogOut size={16} className="group-hover/logout:translate-x-1 transition-transform" />
-                                                    Sign Out
+                                                    {item.icon}
+                                                    {item.label}
                                                 </button>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div >
-                        </div >
-                    </div >
-                </div >
-            </header >
+                                            ))}
+                                        </div>
+
+                                        <div className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2">
+                                            <button
+                                                onClick={() => { setProfileOpen(false); handleLogout(); }}
+                                                className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors min-h-[44px]"
+                                            >
+                                                <LogOut size={18} />
+                                                Sign Out
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
 
             {/* Main Content */}
-            < main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 overflow-x-hidden" >
+            <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 overflow-x-hidden">
                 {children}
-            </main >
+            </main>
 
             {/* Call Rating Modal */}
-            {
-                showRatingModal && lastCompletedCall && (
-                    <CallRatingModal
-                        callId={lastCompletedCall.callId}
-                        partnerName={lastCompletedCall.partnerName}
-                        onClose={() => dispatch(closeRatingModal())}
-                    />
-                )
-            }
-        </div >
+            {showRatingModal && lastCompletedCall && (
+                <CallRatingModal
+                    callId={lastCompletedCall.callId}
+                    partnerName={lastCompletedCall.partnerName}
+                    onClose={() => dispatch(closeRatingModal())}
+                />
+            )}
+        </div>
     );
 };
 

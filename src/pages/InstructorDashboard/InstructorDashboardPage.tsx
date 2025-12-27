@@ -94,10 +94,10 @@ const InstructorDashboardPage: React.FC = () => {
             <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8">
                     {/* Welcome Section */}
-                    <div className="bg-primary-600 rounded-xl p-4 md:p-6 lg:p-8 text-white mb-6 md:mb-8 shadow-lg">
+                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 md:p-6 lg:p-8 text-white mb-6 md:mb-8 shadow-lg">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold mb-2">
+                                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold mb-2">
                                     Welcome back, {user?.fullName || 'Instructor'}! 👋
                                 </h1>
                                 <p className="text-indigo-100">
@@ -128,7 +128,7 @@ const InstructorDashboardPage: React.FC = () => {
                                     <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
                                         {stat.label}
                                     </h3>
-                                    <p className="text-2xl md:text-3xl font-semibold text-slate-900 dark:text-white">
+                                    <p className="text-3xl font-bold text-slate-900 dark:text-white">
                                         {loading ? '...' : stat.value}
                                     </p>
                                 </div>
@@ -179,7 +179,7 @@ const InstructorDashboardPage: React.FC = () => {
                         </div>
 
                         {/* Getting Started Guide */}
-                        <div className="card bg-blue-50 dark:bg-slate-800 border-blue-200 dark:border-slate-600">
+                        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 border-blue-200 dark:border-slate-600">
                             <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
                                 Getting Started
                             </h3>
@@ -251,7 +251,7 @@ const InstructorDashboardPage: React.FC = () => {
                                     <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                     <h4 className="font-medium text-slate-900 dark:text-white">Topics</h4>
                                 </div>
-                                <p className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white mb-1">
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                                     {loading ? '...' : stats.topicsCount}
                                 </p>
                                 <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -263,7 +263,7 @@ const InstructorDashboardPage: React.FC = () => {
                                     <CheckSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
                                     <h4 className="font-medium text-slate-900 dark:text-white">Quizzes</h4>
                                 </div>
-                                <p className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white mb-1">
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                                     {loading ? '...' : stats.quizzesCount}
                                 </p>
                                 <p className="text-xs text-slate-600 dark:text-slate-400">

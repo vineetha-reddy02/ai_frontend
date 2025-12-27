@@ -64,7 +64,7 @@ const AdminAnalyticsPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 dark:text-white mb-2">Analytics Dashboard</h1>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">Analytics Dashboard</h1>
           <p className="text-slate-600 dark:text-slate-400">Platform insights and metrics</p>
         </div>
 
@@ -103,8 +103,8 @@ const AdminAnalyticsPage: React.FC = () => {
               <Activity className="text-orange-600" size={20} />
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
-              {stats?.activeUsers && stats?.totalUsers
-                ? Math.round((stats.activeUsers / stats.totalUsers) * 100)
+              {stats?.activeUsers && stats?.totalUsers 
+                ? Math.round((stats.activeUsers / stats.totalUsers) * 100) 
                 : 0}%
             </p>
           </div>

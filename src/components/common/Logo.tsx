@@ -22,10 +22,14 @@ export const Logo: React.FC<LogoProps> = ({ className = '' }) => {
     // This is a conflict.
     // Compromise: Add a subtle white glow/drop-shadow in dark mode to separate "Talks" from the dark background.
 
+    const textShadowStyle = theme === 'dark'
+        ? { textShadow: '0 0 1px rgba(255,255,255,0.8), 0 0 10px rgba(255,255,255,0.5)' }
+        : {};
+
     return (
         <div className={`flex items-center gap-1 font-bold text-2xl tracking-tight ${className}`} aria-label="EduTalks Logo">
             <span className="text-red-600">Edu</span>
-            <span className="text-black dark:text-white transition-colors duration-200">Talks</span>
+            <span className="text-black" style={textShadowStyle}>Talks</span>
         </div>
     );
 };

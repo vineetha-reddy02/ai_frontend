@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, User, Clock, History, RefreshCw, ArrowLeft, ChevronDown, CheckCircle } from 'lucide-react';
+import { Phone, User, Clock, History, RefreshCw, ArrowLeft, ChevronDown } from 'lucide-react';
 import callsService from '../../services/calls';
 import Button from '../../components/Button';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,8 +12,6 @@ import UserStatusIndicator from '../../components/UserStatusIndicator';
 import OnlineStatusIndicator from '../../components/OnlineStatusIndicator';
 import { RootState } from '../../store';
 import { callLogger } from '../../utils/callLogger';
-import { motion, AnimatePresence } from 'framer-motion';
-import { fadeIn, slideUp, buttonClick, cardHover, staggerContainer } from '../../constants/animations';
 
 const UserVoiceCall: React.FC = () => {
     const navigate = useNavigate();
@@ -29,8 +27,6 @@ const UserVoiceCall: React.FC = () => {
     const [findingPartner, setFindingPartner] = useState(false);
     const [showPrivacyModal, setShowPrivacyModal] = useState(false);
     const [showVoiceCallLimitModal, setShowVoiceCallLimitModal] = useState(false);
-    const [statusOpen, setStatusOpen] = useState(false);
-    const statusRef = useRef<HTMLDivElement>(null);
 
     const {
         hasActiveSubscription,
@@ -193,34 +189,6 @@ const UserVoiceCall: React.FC = () => {
         }
     };
 
-    // Close status dropdown on click outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
-                setStatusOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleStatusChange = (newStatus: string) => {
-        setUserStatus(newStatus);
-        setStatusOpen(false);
-        if (newStatus === 'online' || newStatus === 'offline') {
-            callsService.updateAvailability(newStatus === 'online' ? 'Online' : 'Offline')
-                .catch(err => console.error('Failed to update availability', err));
-        }
-    };
-
-    const statusOptions = [
-        { id: 'online', label: 'ONLINE', color: 'bg-green-500', text: 'text-green-500' },
-        { id: 'offline', label: 'OFFLINE', color: 'bg-slate-500', text: 'text-slate-500' },
-        { id: 'busy', label: 'BUSY', color: 'bg-amber-500', text: 'text-amber-500' },
-    ];
-
-    const currentStatusConfig = statusOptions.find(o => o.id === userStatus) || statusOptions[1];
-
     // Poll for updates and maintain 'Online' status
     useEffect(() => {
         if (activeTab === 'available') {
@@ -335,274 +303,187 @@ const UserVoiceCall: React.FC = () => {
     return (
         <div className="space-y-4 md:space-y-6">
             {/* Header with Session Timer */}
-            <motion.div
-                variants={fadeIn}
-                initial="initial"
-                animate="animate"
-                className="flex flex-col sm:flex-row items-center justify-between gap-6 glass-panel p-6 rounded-[2rem]"
-            >
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary-600 dark:bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary-500/20">
-                        <Phone className="w-6 h-6 text-white dark:text-[#030014]" />
-                    </div>
-                    <div>
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">
-                            {activeTab === 'available' ? 'PRACTICE HUB' : 'CALL HISTORY'}
-                        </h3>
-                        <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">
-                            Global Fluency Network
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4">
+                <h3 className="text-lg md:text-xl font-semibold text-slate-900 dark:text-white">
+                    {activeTab === 'available' ? 'Available Users' : 'Call History'}
+                </h3>
+                <div className="flex items-center gap-2 md:gap-4 w-full sm:w-auto">
                     {/* Session Timer/Status */}
                     {activeTab === 'available' && (
-                        hasActiveSubscription ? (
-                            <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-xl">
-                                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                                <span className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">
-                                    Unlimited Access
+                        hasActiveSubscription ? ( // Paid subscribers see unlimited
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                <Clock className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                                <span className="text-xs text-green-900 dark:text-green-200 whitespace-nowrap font-medium">
+                                    Unlimited calls
                                 </span>
                             </div>
-                        ) : (
-                            <div className="flex items-center gap-3 px-4 py-2 bg-primary-500/10 border border-primary-500/20 rounded-xl">
-                                <Clock className="w-4 h-4 text-primary-500" />
-                                <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest">
-                                    {Math.floor(voiceCallRemainingSeconds / 60)}:{String(voiceCallRemainingSeconds % 60).padStart(2, '0')} LEFT
+                        ) : ( // Free trial users see usage
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">
+                                    {Math.floor((voiceCallLimitSeconds - voiceCallRemainingSeconds) / 60)}:{String((voiceCallLimitSeconds - voiceCallRemainingSeconds) % 60).padStart(2, '0')} used
+                                </span>
+                                <span className="text-xs text-slate-400 dark:text-slate-600">/</span>
+                                <span className={`text-sm font-mono font-bold ${!hasVoiceCallTimeRemaining ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
+                                    {Math.floor(voiceCallRemainingSeconds / 60)}:{String(voiceCallRemainingSeconds % 60).padStart(2, '0')} left
                                 </span>
                             </div>
                         )
                     )}
-
-                    <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl w-full sm:w-auto border border-primary-500/5">
-                        <motion.button
-                            whileHover={{ y: -1 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`flex-1 sm:flex-none px-6 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${activeTab === 'available' ? 'bg-white dark:bg-white text-primary-600 dark:text-[#030014] shadow-md' : 'text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-white'}`}
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                        <button
+                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'available' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
                             onClick={() => setActiveTab('available')}
                         >
-                            Connect
-                        </motion.button>
-                        <motion.button
-                            whileHover={{ y: -1 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`flex-1 sm:flex-none px-6 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${activeTab === 'history' ? 'bg-white dark:bg-white text-primary-600 dark:text-[#030014] shadow-md' : 'text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-white'}`}
+                            Available
+                        </button>
+                        <button
+                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
                             onClick={() => setActiveTab('history')}
                         >
                             History
-                        </motion.button>
+                        </button>
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {activeTab === 'available' && (
-                <div className="space-y-6 relative z-30">
+                <div className="space-y-4">
                     {/* Status and Refresh */}
-                    <motion.div
-                        variants={fadeIn}
-                        initial="initial"
-                        animate="animate"
-                        transition={{ delay: 0.3 }}
-                        className="relative z-30 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white/40 dark:bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-primary-500/10 dark:border-white/5 shadow-sm overflow-visible"
-                    >
-                        <div className="flex items-center gap-6">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Your Status:</span>
-                            <div className="relative" ref={statusRef}>
-                                <motion.button
-                                    whileHover={{ y: -1 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => setStatusOpen(!statusOpen)}
-                                    className="flex items-center gap-3 bg-white/5 border border-white/5 text-[10px] font-black tracking-widest px-4 py-2.5 rounded-xl hover:bg-white/10 transition-all uppercase min-w-[130px] justify-between"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full ${currentStatusConfig.color} shadow-[0_0_8px_rgba(0,0,0,0.5)] ${userStatus === 'online' ? 'animate-pulse' : ''}`} />
-                                        <span className={currentStatusConfig.text}>{currentStatusConfig.label}</span>
-                                    </div>
-                                    <ChevronDown size={12} className={`transition-transform duration-300 ${statusOpen ? 'rotate-180' : ''}`} />
-                                </motion.button>
-
-                                <AnimatePresence>
-                                    {statusOpen && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                            className="absolute top-full mt-3 left-0 w-full glass-panel rounded-xl shadow-2xl py-2 z-50 border border-white/10"
-                                        >
-                                            {statusOptions.map((option) => (
-                                                <button
-                                                    key={option.id}
-                                                    onClick={() => handleStatusChange(option.id)}
-                                                    className={`w-full text-left px-4 py-2.5 text-[10px] font-black tracking-widest transition-all flex items-center gap-3 hover:bg-white/5 ${userStatus === option.id ? 'bg-primary-500/10 text-primary-500' : 'text-slate-400'}`}
-                                                >
-                                                    <span className={`w-2 h-2 rounded-full ${option.color}`} />
-                                                    {option.label}
-                                                </button>
-                                            ))}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-2">
-                                <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                                <span className="text-[10px] font-black text-primary-500/60 uppercase tracking-[0.2em] whitespace-nowrap">
-                                    {availableUsers.length} MEMBERS ONLINE
-                                </span>
-                            </div>
-                            <div className="h-4 w-px bg-slate-200 dark:bg-white/10 hidden sm:block" />
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => fetchAvailableUsers()}
-                                className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-black uppercase tracking-widest text-[10px] hover:opacity-80 transition-opacity"
-                            >
-                                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                                <span>Sync</span>
-                            </motion.button>
-                        </div>
-                    </motion.div>
-
-                    {/* Random Call Interface */}
-                    <motion.div
-                        variants={slideUp}
-                        initial="initial"
-                        animate="animate"
-                        className="relative z-10 overflow-hidden flex flex-col items-center justify-center py-24 glass-panel rounded-[3rem] text-center"
-                    >
-                        {/* Decorative Background Gradients */}
-                        <div className="absolute top-0 left-0 w-full h-full -z-10 pointer-events-none">
-                            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary-600/10 rounded-full blur-[100px]" />
-                            <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-secondary-500/10 rounded-full blur-[100px]" />
-                        </div>
-
-                        <div className="relative mb-8">
-                            <div className="w-28 h-28 bg-primary-600 dark:bg-primary-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-primary-500/40 rotate-6 transition-transform hover:rotate-0 duration-500">
-                                <Phone className="w-12 h-12 text-white -rotate-6" />
-                            </div>
-                            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-full border-4 border-white dark:border-[#030014] flex items-center justify-center shadow-lg">
-                                <div className="w-3 h-3 bg-white rounded-full animate-ping" />
-                            </div>
-                        </div>
-
-                        <h2 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white mb-6 tracking-tighter leading-tight uppercase drop-shadow-md">
-                            VOICE <br className="sm:hidden" /> <span className="text-primary-600 dark:text-primary-400">CONNECT</span>
-                        </h2>
-
-                        <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-lg mb-12 px-6 font-medium leading-relaxed">
-                            Practice your natural English with online learners. <br className="hidden md:block" /> Real conversations, real progress.
-                        </p>
-
-                        <div className="flex flex-col items-center gap-6 w-full max-w-sm px-6">
-                            <motion.div
-                                whileHover={{ scale: 1.05, y: -5 }}
-                                whileTap={{ scale: 0.98 }}
-                                className="w-full"
-                            >
-                                <Button
-                                    size="lg"
-                                    className={`w-full h-16 text-xs font-black uppercase tracking-[0.3em] shadow-xl shadow-primary-500/20 rounded-2xl bg-primary-600 hover:bg-primary-700 text-white border-none transition-all group ${findingPartner ? 'animate-pulse' : ''}`}
-                                    onClick={() => {
-                                        if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) {
-                                            setShowVoiceCallLimitModal(true);
-                                        } else if (!hasActiveSubscription && !isTrialActive) {
-                                            triggerUpgradeModal();
-                                        } else {
-                                            setShowPrivacyModal(true);
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Your Status:</span>
+                            <div className="relative">
+                                {/* Status Dot Indicator */}
+                                <div className={`absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ${userStatus === 'online' ? 'bg-green-500' :
+                                    userStatus === 'offline' ? 'bg-red-500' :
+                                        'bg-orange-500'
+                                    }`} />
+                                <select
+                                    className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white py-1.5 pl-8 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-sm font-medium shadow-sm transition-colors hover:border-blue-400"
+                                    value={userStatus}
+                                    onChange={(e) => {
+                                        const newStatus = e.target.value;
+                                        setUserStatus(newStatus);
+                                        // Sync with backend
+                                        if (newStatus === 'online' || newStatus === 'offline') {
+                                            callsService.updateAvailability(newStatus === 'online' ? 'Online' : 'Offline')
+                                                .catch(err => console.error('Failed to update availability', err));
                                         }
                                     }}
-                                    disabled={findingPartner || loading || availableUsers.length === 0}
-                                    leftIcon={findingPartner ? <RefreshCw className="animate-spin" /> : <Phone className="w-5 h-5 group-hover:scale-110 transition-transform" />}
                                 >
-                                    {findingPartner ? 'FINDING PARTNER...' : 'START SESSION'}
-                                </Button>
-                            </motion.div>
+                                    <option value="online">Online</option>
+                                    <option value="offline">Offline</option>
+                                    <option value="busy">Busy</option>
+                                </select>
+                                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
+                                    <ChevronDown size={14} />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-slate-500">
+                                {availableUsers.length} Online Users
+                            </span>
+                            <Button variant="ghost" size="sm" onClick={() => fetchAvailableUsers()} leftIcon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}>
+                                Refresh
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Random Call Interface */}
+                    <div className="flex flex-col items-center justify-center py-12 md:py-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-center">
+                        <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-6 ring-8 ring-blue-50/50 dark:ring-blue-900/10">
+                            <Phone className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                        </div>
+
+                        <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-3">
+                            Review with a Random Partner
+                        </h2>
+
+                        <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 max-w-md mb-6 md:mb-8 px-4">
+                            Practice your pronunciation and speaking skills with other learners available online right now.
+                        </p>
+
+                        <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+                            <Button
+                                size="lg"
+                                className={`w-full h-14 text-lg shadow-lg shadow-blue-500/20 rounded-full ${findingPartner ? 'animate-pulse cursor-wait' : ''}`}
+                                onClick={() => {
+                                    // Check voice call limit first
+                                    if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) {
+                                        setShowVoiceCallLimitModal(true);
+                                    } else if (!hasActiveSubscription && !isTrialActive) {
+                                        triggerUpgradeModal();
+                                    } else {
+                                        setShowPrivacyModal(true);
+                                    }
+                                }}
+                                disabled={findingPartner || loading || availableUsers.length === 0}
+                                leftIcon={findingPartner ? <RefreshCw className="animate-spin" /> : <Phone />}
+                            >
+                                {findingPartner ? 'Finding Partner...' : 'Call Random Partner'}
+                            </Button>
 
                             {availableUsers.length === 0 && !loading && (
-                                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20">
-                                    <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                                    <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">
-                                        Waiting for users...
-                                    </span>
-                                </div>
+                                <p className="text-sm text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-4 py-2 rounded-lg border border-amber-100 dark:border-amber-800">
+                                    No users currently online. Try again in a moment.
+                                </p>
                             )}
                         </div>
-                    </motion.div>
+                    </div>
 
                     {/* Privacy Notice Modal */}
-                    <AnimatePresence>
-                        {showPrivacyModal && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="absolute inset-0 bg-primary-950/40 backdrop-blur-sm"
-                                    onClick={() => setShowPrivacyModal(false)}
-                                />
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                    className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl max-w-md w-full p-8 z-10 border border-primary-100 relative overflow-hidden"
-                                >
-                                    <div className="absolute top-0 left-0 w-full h-2 bg-primary-600 dark:bg-primary-500" />
-
-                                    <div className="text-center mb-8">
-                                        <div className="w-16 h-16 bg-primary-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 text-primary-500 dark:text-primary-400 shadow-sm border border-primary-100">
-                                            <User size={32} />
-                                        </div>
-                                        <h3 className="text-2xl font-black text-primary-500 dark:text-white uppercase tracking-tight">Privacy Notice</h3>
+                    {showPrivacyModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+                                <div className="text-center mb-6">
+                                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 dark:text-blue-400">
+                                        <User size={24} />
                                     </div>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Privacy Notice</h3>
+                                </div>
 
-                                    <div className="bg-secondary-200/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-secondary-400 mb-8">
-                                        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-bold uppercase tracking-wide opacity-80">
-                                            Practice hub is for learning purposes only. EduTalks is not responsible for info shared. Avoid sharing sensitive data or private details.
-                                        </p>
-                                    </div>
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl mb-6">
+                                    <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
+                                        Voice Calling is designed for communication and learning purposes only.
+                                        EduTalks Company is not responsible for any personal information you choose to share during calls.
+                                        Please avoid sharing sensitive data, financial information, passwords, or any private details while using this feature.
+                                    </p>
+                                </div>
 
-                                    <div className="flex gap-4">
-                                        <Button
-                                            variant="outline"
-                                            className="flex-1 h-12 rounded-xl font-bold uppercase tracking-widest text-xs border-secondary-400 text-slate-500"
-                                            onClick={() => setShowPrivacyModal(false)}
-                                        >
-                                            Decline
-                                        </Button>
-                                        <Button
-                                            className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-xs bg-primary-500 text-white shadow-lg shadow-primary-500/20"
-                                            onClick={() => {
-                                                setShowPrivacyModal(false);
-                                                handleRandomCall();
-                                            }}
-                                        >
-                                            Connect
-                                        </Button>
-                                    </div>
-                                </motion.div>
+                                <div className="flex gap-3">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => setShowPrivacyModal(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="primary"
+                                        className="flex-1"
+                                        onClick={() => {
+                                            setShowPrivacyModal(false);
+                                            handleRandomCall();
+                                        }}
+                                    >
+                                        Agree & Connect
+                                    </Button>
+                                </div>
                             </div>
-                        )}
-                    </AnimatePresence>
+                        </div>
+                    )}
                 </div>
             )}
+
 
             {activeTab === 'history' && (
                 <div className="space-y-4">
                     {loading ? (
-                        <div className="py-24 text-center">
-                            <RefreshCw className="w-12 h-12 text-primary-500/20 animate-spin mx-auto mb-4" />
-                            <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">Syncing History...</p>
-                        </div>
+                        <div className="py-12 text-center text-slate-500">Loading history...</div>
                     ) : history.length > 0 ? (
-                        <motion.div
-                            variants={staggerContainer}
-                            initial="initial"
-                            animate="animate"
-                            className="space-y-4"
-                        >
+                        <div className="space-y-3">
                             {history.map((call) => {
                                 // Map flat API fields
                                 const startTime = call.initiatedAt || call.startTime;
@@ -611,49 +492,65 @@ const UserVoiceCall: React.FC = () => {
                                 const status = call.status || 'Unknown';
 
                                 return (
-                                    <motion.div
-                                        key={call.callId || call.id}
-                                        variants={fadeIn}
-                                        whileHover={{ x: 5 }}
-                                        className="p-4 bg-white/40 dark:bg-white/5 backdrop-blur-md border border-primary-500/5 rounded-2xl flex items-center justify-between transition-all group hover:bg-white/60 dark:hover:bg-white/10"
-                                    >
-                                        <div className="flex items-center gap-6">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${status === 'Completed' ? 'bg-green-500/10 text-green-600' :
-                                                status === 'Missed' ? 'bg-red-500/10 text-red-500' :
-                                                    'bg-slate-500/10 text-slate-500'
+                                    <div key={call.callId || call.id} className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between transition-hover hover:border-blue-300 dark:hover:border-blue-700">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-2.5 rounded-full ${status === 'Completed' ? 'bg-green-100 text-green-600 dark:bg-green-900/30' :
+                                                status === 'Missed' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
+                                                    'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                                                 }`}>
-                                                <Phone size={20} className={isIncoming ? "rotate-180" : ""} />
+                                                {/* Direction Icon */}
+                                                {isIncoming ? (
+                                                    <div className="relative">
+                                                        <Phone size={20} />
+                                                        <ArrowLeft size={12} className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full" />
+                                                    </div>
+                                                ) : (
+                                                    <Phone size={20} />
+                                                )}
                                             </div>
                                             <div>
-                                                <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter">
-                                                    VOICE SESSION
+                                                <h4 className="font-semibold text-slate-900 dark:text-white">
+                                                    {/* MASKED NAME as per request */}
+                                                    Voice Call
                                                 </h4>
-                                                <div className="flex items-center gap-3 mt-1">
-                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                                        {(() => {
-                                                            const timeStr = startTime?.endsWith?.('Z') ? startTime : `${startTime}Z`;
-                                                            const date = new Date(timeStr);
-                                                            return `${date.toLocaleDateString()} • ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                                                        })()}
-                                                    </span>
-                                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border ${status === 'Missed' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                                        status === 'Completed' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                                                        }`}>{status}</span>
-                                                </div>
+                                                <p className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                                                    <span>{(() => {
+                                                        // Backend sends UTC time without 'Z', so we need to append it
+                                                        const timeStr = startTime?.endsWith?.('Z') ? startTime : `${startTime}Z`;
+                                                        const date = new Date(timeStr);
+                                                        return date.toLocaleDateString();
+                                                    })()}</span>
+                                                    <span>•</span>
+                                                    <span>{(() => {
+                                                        // Backend sends UTC time without 'Z', so we need to append it
+                                                        const timeStr = startTime?.endsWith?.('Z') ? startTime : `${startTime}Z`;
+                                                        const date = new Date(timeStr);
+                                                        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                    })()}</span>
+                                                    {status && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className={
+                                                                status === 'Missed' ? 'text-red-500 font-medium' :
+                                                                    status === 'Completed' ? 'text-green-600 font-medium' : ''
+                                                            }>{status}</span>
+                                                        </>
+                                                    )}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-500/5 px-3 py-1 rounded-lg border border-primary-500/10 inline-flex items-center gap-2">
-                                                <Clock size={12} />
-                                                <span className="font-mono">
+                                        <div className="flex flex-col items-end gap-1">
+                                            <div className="flex items-center gap-1.5 text-sm font-mono text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                                                <Clock size={14} />
+                                                <span>
                                                     {Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')}
                                                 </span>
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 );
                             })}
-                        </motion.div>
+                        </div>
                     ) : (
                         <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
                             <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
@@ -666,103 +563,75 @@ const UserVoiceCall: React.FC = () => {
             )}
 
             {/* Voice Call Limit Reached Modal */}
-            <AnimatePresence>
-                {showVoiceCallLimitModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-primary-950/60 backdrop-blur-md"
-                            onClick={() => setShowVoiceCallLimitModal(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                            className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl max-w-lg w-full p-10 z-10 border border-primary-100 relative overflow-hidden text-center"
-                        >
-                            <div className="absolute top-0 left-0 w-full h-3 bg-primary-600 dark:bg-primary-500" />
-
-                            <div className="mb-10">
-                                <div className="w-24 h-24 bg-primary-50 dark:bg-indigo-900/30 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-primary-500 dark:text-primary-400 shadow-inner border border-primary-100 rotate-12">
-                                    <Clock size={48} className="-rotate-12" />
-                                </div>
-                                <h3 className="text-3xl md:text-4xl font-black text-primary-500 dark:text-white mb-3 tracking-tighter uppercase">
-                                    Limit Reached
-                                </h3>
-                                <p className="text-lg text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest opacity-70">
-                                    You've used your 5 free minutes
-                                </p>
+            {showVoiceCallLimitModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600 dark:text-red-400">
+                                <Clock size={32} />
                             </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                                Voice Call Limit Reached
+                            </h3>
+                            <p className="text-slate-600 dark:text-slate-400">
+                                You've used your 5 minutes of free voice calls
+                            </p>
+                        </div>
 
-                            <div className="bg-secondary-200/50 dark:bg-slate-800/50 p-6 rounded-[2rem] mb-10 border border-secondary-400 text-left">
-                                <p className="text-sm font-black text-primary-500 uppercase tracking-widest mb-4">
-                                    YOUR ACTIVE BENEFITS:
-                                </p>
-                                <ul className="space-y-4">
-                                    {[
-                                        'Full Pronunciation Access',
-                                        'All Interactive Topics',
-                                        'Unlimited Smart Quizzes'
-                                    ].map((item, i) => (
-                                        <motion.li
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.1 * i }}
-                                            key={i}
-                                            className="flex items-center gap-4 text-slate-700 dark:text-slate-200"
-                                        >
-                                            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                                                <CheckCircle className="w-4 h-4 text-white" />
-                                            </div>
-                                            <span className="font-bold uppercase tracking-wider text-xs">{item}</span>
-                                        </motion.li>
-                                    ))}
-                                </ul>
-                            </div>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl mb-6">
+                            <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed mb-3">
+                                <strong>Good news!</strong> Your 24-hour free trial is still active. You can continue using:
+                            </p>
+                            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-2 ml-4">
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+                                    <span>AI Pronunciation Practice</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+                                    <span>Topics & Learning Materials</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+                                    <span>Quizzes & Assessments</span>
+                                </li>
+                            </ul>
+                        </div>
 
-                            <div className="bg-primary-500 p-8 rounded-[2rem] mb-10 shadow-xl shadow-primary-500/20 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/20 transition-all duration-700" />
-                                <p className="text-xl font-black text-white uppercase tracking-tighter mb-2 italic">
-                                    WANT UNLIMITED CALLS?
-                                </p>
-                                <p className="text-xs text-white/80 font-bold uppercase tracking-[0.15em]">
-                                    UPGRADE TO PRO FOR UNLIMITED VOICE SESSIONS
-                                </p>
-                            </div>
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-4 rounded-xl mb-6 border border-indigo-200 dark:border-indigo-800">
+                            <p className="text-sm font-medium text-indigo-900 dark:text-indigo-200 mb-2">
+                                Want unlimited voice calls?
+                            </p>
+                            <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                                Upgrade to Pro for unlimited voice calls, advanced features, and more!
+                            </p>
+                        </div>
 
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <Button
-                                    variant="outline"
-                                    className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-widest text-xs border-secondary-400 text-slate-500"
-                                    onClick={() => setShowVoiceCallLimitModal(false)}
-                                >
-                                    Later
-                                </Button>
-                                <motion.div
-                                    whileHover="hover"
-                                    whileTap="tap"
-                                    variants={buttonClick}
-                                    className="flex-1"
-                                >
-                                    <Button
-                                        className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-xs bg-primary-500 text-white shadow-xl shadow-primary-500/30 border-b-4 border-primary-700"
-                                        onClick={() => {
-                                            setShowVoiceCallLimitModal(false);
-                                            navigate('/subscriptions');
-                                        }}
-                                    >
-                                        UPGRADE NOW
-                                    </Button>
-                                </motion.div>
-                            </div>
-                        </motion.div>
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setShowVoiceCallLimitModal(false)}
+                            >
+                                Continue Trial
+                            </Button>
+                            <Button
+                                variant="primary"
+                                className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                                onClick={() => {
+                                    setShowVoiceCallLimitModal(false);
+                                    navigate('/subscriptions');
+                                }}
+                            >
+                                Upgrade Now
+                            </Button>
+                        </div>
                     </div>
-                )}
-            </AnimatePresence>
-        </div >
+                </div>
+            )}
+        </div>
     );
 };
 
 export default UserVoiceCall;
+

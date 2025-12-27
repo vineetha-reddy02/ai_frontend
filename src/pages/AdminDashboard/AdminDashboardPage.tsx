@@ -38,13 +38,13 @@ const AdminDashboardPage: React.FC = () => {
   };
 
   // Module colors
-  const moduleColors: Record<string, { bg: string; text: string }> = {
-    users: { bg: 'bg-blue-600', text: 'text-blue-600' },
-    payments: { bg: 'bg-green-600', text: 'text-green-600' },
-    subscriptions: { bg: 'bg-purple-600', text: 'text-purple-600' },
-    coupons: { bg: 'bg-orange-600', text: 'text-orange-600' },
-    referrals: { bg: 'bg-rose-600', text: 'text-rose-600' },
-    analytics: { bg: 'bg-cyan-600', text: 'text-cyan-600' },
+  const moduleColors: Record<string, { from: string; to: string; text: string }> = {
+    users: { from: 'from-blue-500', to: 'to-indigo-600', text: 'text-blue-600' },
+    payments: { from: 'from-green-500', to: 'to-emerald-600', text: 'text-green-600' },
+    subscriptions: { from: 'from-purple-500', to: 'to-violet-600', text: 'text-purple-600' },
+    coupons: { from: 'from-orange-500', to: 'to-amber-600', text: 'text-orange-600' },
+    referrals: { from: 'from-pink-500', to: 'to-rose-600', text: 'text-pink-600' },
+    analytics: { from: 'from-cyan-500', to: 'to-sky-600', text: 'text-cyan-600' },
   };
 
   // Module routes
@@ -73,7 +73,7 @@ const AdminDashboardPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-2">
               Admin Dashboard
             </h1>
             <p className="text-slate-600 dark:text-slate-400">
@@ -121,12 +121,12 @@ const AdminDashboardPage: React.FC = () => {
                     className="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
                   >
                     {/* Gradient Background */}
-                    <div className="absolute inset-0 bg-primary-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${colors.from} ${colors.to} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
 
                     {/* Content */}
                     <div className="relative">
                       {/* Icon */}
-                      <div className={`w-16 h-16 rounded-lg ${colors.bg} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                      <div className={`w-16 h-16 rounded-lg bg-gradient-to-br ${colors.from} ${colors.to} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
                         {icon}
                       </div>
 

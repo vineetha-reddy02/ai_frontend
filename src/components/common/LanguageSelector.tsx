@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, Globe } from 'lucide-react';
 import { LANGUAGES, Language } from '../../constants/languages';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const STORAGE_KEY = 'edutalks_language_preference';
 const DEFAULT_LANG_CODE = 'English';
@@ -61,116 +60,96 @@ export const LanguageSelector: React.FC = () => {
 
     // Button Label Text
     const buttonLabel = selectedLanguage.code === 'English'
-        ? 'GB ENGLISH'
-        : `GB ENGLISH / ${selectedLanguage.name.toUpperCase()}`;
+        ? 'English'
+        : `English / ${selectedLanguage.name}`;
 
     return (
-        <div className="relative flex items-center text-left" ref={dropdownRef}>
+        <div className="relative" ref={dropdownRef}>
             {/* Dropdown Trigger */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-xl hover:bg-white/10 dark:hover:bg-white/10 transition-colors rounded-xl border border-primary-500/10 dark:border-white/10 group focus:outline-none focus:ring-2 focus:ring-primary-500/20 whitespace-nowrap"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
                 aria-label="Select Language"
             >
                 {/* Mobile: Globe icon, Desktop: Flags */}
-                <Globe size={18} className="sm:hidden text-slate-600 dark:text-slate-400 group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:flex items-center text-xl leading-none group-hover:scale-105 transition-transform shrink-0">
+                <Globe size={20} className="sm:hidden text-slate-600 dark:text-slate-400" />
+                <span className="hidden sm:flex items-center text-xl leading-none">
                     {selectedLanguage.code !== 'English' && (
-                        <span className="flex items-center">
+                        <>
                             <span>🇬🇧</span>
-                            <span className="mx-1.5 text-slate-400 opacity-40">/</span>
-                        </span>
+                            <span className="mx-1 text-slate-300">/</span>
+                        </>
                     )}
                     <span>{selectedLanguage.flag}</span>
                 </span>
 
-                <span className="hidden sm:inline text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] text-left truncate">
+                <span className="hidden sm:inline text-sm font-medium text-slate-700 dark:text-slate-200">
                     {buttonLabel}
                 </span>
 
                 <ChevronDown
-                    size={14}
-                    className={`text-slate-500 transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                    size={16}
+                    className={`text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                 />
             </button>
 
             {/* Dropdown Menu */}
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -4, x: "-50%", scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
-                        exit={{ opacity: 0, y: -4, x: "-50%", scale: 0.98 }}
-                        transition={{
-                            type: 'spring',
-                            damping: 25,
-                            stiffness: 400,
-                            mass: 0.8
-                        }}
-                        style={{
-                            top: 'calc(100% + 6px)',
-                            left: '50%'
-                        }}
-                        className="absolute w-full min-w-[220px] glass-panel rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] py-3 z-50 overflow-hidden border border-white/20 origin-top"
-                        role="listbox"
-                    >
-                        <div className="px-6 py-3 border-b border-white/5 mb-2">
-                            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-80">
-                                Select Language Protocol
-                            </span>
-                        </div>
+            {isOpen && (
+                <div
+                    className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg shadow-slate-200/50 dark:shadow-black/50 py-2 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-right"
+                    role="listbox"
+                >
+                    <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            Select Regional Language
+                        </span>
+                    </div>
 
-                        <div className="max-h-[340px] overflow-y-auto custom-scrollbar px-2 space-y-1">
-                            {displayedLanguages.map((lang) => (
-                                <button
-                                    key={lang.code}
-                                    onClick={() => handleSelect(lang)}
-                                    role="option"
-                                    aria-selected={selectedLanguage.code === lang.code}
-                                    className={`
-                                        w-full text-left flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 group/item
-                                        ${selectedLanguage.code === lang.code
-                                            ? 'bg-primary-500/10 text-slate-900 dark:text-white border border-primary-500/10'
-                                            : 'text-slate-700 dark:text-slate-300 hover:bg-white/5 border border-transparent hover:border-primary-500/5'
-                                        }
-                                    `}
-                                >
-                                    <span className="flex items-center gap-4">
-                                        <span className="text-2xl leading-none group-hover/item:scale-110 transition-transform duration-300">{lang.flag}</span>
-                                        <div className="flex flex-col">
-                                            <span className={`text-xs uppercase tracking-widest font-black ${selectedLanguage.code === lang.code ? 'text-primary-600 dark:text-primary-400' : ''}`}>
-                                                {lang.name}
-                                            </span>
-                                            <span className="text-[10px] font-bold opacity-50 tracking-wide">{lang.nativeName}</span>
-                                        </div>
-                                    </span>
-                                    {selectedLanguage.code === lang.code && (
-                                        <div className="w-6 h-6 bg-primary-600 rounded-lg flex items-center justify-center shadow-lg shadow-primary-600/20 animate-in zoom-in-50 duration-300">
-                                            <Check size={14} className="text-white" />
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
+                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                        {displayedLanguages.map((lang) => (
+                            <button
+                                key={lang.code}
+                                onClick={() => handleSelect(lang)}
+                                role="option"
+                                aria-selected={selectedLanguage.code === lang.code}
+                                className={`
+                                    w-full text-left flex items-center justify-between px-4 py-2.5 text-sm transition-colors
+                                    ${selectedLanguage.code === lang.code
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                    }
+                                `}
+                            >
+                                <span className="flex items-center gap-3">
+                                    <span className="text-xl leading-none">{lang.flag}</span>
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">{lang.name}</span>
+                                        <span className="text-xs opacity-75">{lang.nativeName}</span>
+                                    </div>
+                                </span>
+                                {selectedLanguage.code === lang.code && (
+                                    <Check size={16} className="text-blue-600 dark:text-blue-400" />
+                                )}
+                            </button>
+                        ))}
 
-                            {hasMoreLanguages && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowAllLanguages(true);
-                                    }}
-                                    className="w-full text-left px-4 py-4 mt-2 text-[10px] font-black text-primary-600 dark:text-primary-400 hover:bg-primary-600/5 rounded-xl transition-all uppercase tracking-[0.2em] border-t border-primary-500/5 flex items-center gap-3 justify-center"
-                                >
-                                    <Globe size={14} />
-                                    Master Language List
-                                </button>
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        {hasMoreLanguages && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowAllLanguages(true);
+                                }}
+                                className="w-full text-left px-4 py-3 text-sm text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-medium border-t border-slate-100 dark:border-slate-800 flex items-center gap-2"
+                            >
+                                <Globe size={16} />
+                                View All Languages...
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
-

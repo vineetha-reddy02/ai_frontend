@@ -54,7 +54,7 @@ const SuperAdminDashboardPage: React.FC = () => {
                 </div>
                 {/* <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+12%</span> */}
             </div>
-            <h3 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white mb-1">{value}</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{value}</h3>
             <p className="text-sm text-slate-500">{title}</p>
         </div>
     );
@@ -62,7 +62,7 @@ const SuperAdminDashboardPage: React.FC = () => {
     return (
         <SuperAdminLayout>
             <div className="mb-8">
-                <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white mb-2">Super Admin Dashboard</h1>
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Super Admin Dashboard</h1>
                 <p className="text-slate-600 dark:text-slate-400">System-wide overview and security controls</p>
             </div>
 
@@ -99,7 +99,7 @@ const SuperAdminDashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Quick Actions */}
                 <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Quick Actions</h2>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Quick Actions</h2>
                     <div className="space-y-3">
                         <button
                             onClick={() => navigate('/super-admin/roles')}
@@ -137,7 +137,7 @@ const SuperAdminDashboardPage: React.FC = () => {
 
                 {/* Recent Activity Placeholder */}
                 <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">System Health</h2>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">System Health</h2>
                     <div className="flex items-center justify-center h-48 text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-200 dark:border-slate-700">
                         <p>System metrics visualization coming soon</p>
                     </div>

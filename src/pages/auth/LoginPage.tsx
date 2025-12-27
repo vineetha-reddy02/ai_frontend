@@ -12,8 +12,6 @@ import { setAuthData, setError, updateUserSubscription } from '../../store/authS
 import { showToast } from '../../store/uiSlice';
 import { AppDispatch } from '../../store';
 import { Logo } from '../../components/common/Logo';
-import { motion } from 'framer-motion';
-import { fadeIn, slideUp, staggerContainer } from '../../constants/animations';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -226,182 +224,143 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-dvh flex items-center justify-center p-6 relative overflow-hidden bg-slate-50 dark:bg-[#020617] transition-colors duration-700">
-      {/* Dynamic Background Accents */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary-500/5 rounded-full blur-[120px] dark:bg-primary-400/5" />
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] dark:bg-blue-400/5" />
-      </div>
-
-      <motion.div
-        initial="initial"
-        animate="animate"
-        variants={staggerContainer}
-        className="w-full max-w-[440px] relative z-10"
-      >
-        {/* Back Button - Minimalist Elite Style */}
-        <motion.div variants={fadeIn} className="mb-8">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="card">
+          {/* Back to Home Button */}
           <Link
             to="/"
-            className="group inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all duration-300"
+            className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-6 group"
           >
-            <div className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center group-hover:border-primary-500 dark:group-hover:border-primary-400 transition-colors shadow-sm">
-              <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </div>
-            <span className="text-xs font-semibold tracking-wide">Back to Home</span>
+            <svg
+              className="w-5 h-5 transition-transform group-hover:-translate-x-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            {/* <span className="text-sm font-medium">Back to Home</span> */}
           </Link>
-        </motion.div>
 
-        <div className="glass-panel p-8 md:p-12 rounded-[32px] shadow-2xl">
-          {/* Header Section */}
-          <div className="text-center mb-10">
-            <motion.div
-              variants={fadeIn}
-              className="inline-flex p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 mb-6 shadow-inner"
-            >
-              <Logo className="scale-125" />
-            </motion.div>
-            <motion.h1
-              variants={slideUp}
-              className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight"
-            >
-              Welcome back
-            </motion.h1>
-            <motion.p
-              variants={fadeIn}
-              className="text-slate-500 dark:text-slate-400 font-medium"
-            >
-              Please enter your details to sign in
-            </motion.p>
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <Logo className="scale-125" />
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Email Field */}
-            <motion.div variants={slideUp} className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">
+          <h1 className="text-3xl font-bold text-center mb-2 text-slate-900 dark:text-white">
+            Welcome Back
+          </h1>
+          <p className="text-center text-slate-600 dark:text-slate-400 mb-8">
+            Login to your EduTalks account
+          </p>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
                 Email Address
               </label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-primary-500 transition-colors duration-300">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" />
-                  </svg>
-                </div>
-                <input
-                  {...register('email')}
-                  type="email"
-                  placeholder="name@example.com"
-                  className="w-full h-[56px] pl-12 pr-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 dark:focus:border-primary-600 transition-all duration-300 outline-none font-medium"
-                />
-              </div>
+              <input
+                {...register('email')}
+                type="email"
+                placeholder="john@example.com"
+                className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
               {errors.email && (
-                <p className="text-red-500 text-xs font-semibold ml-1 animate-fadeIn">
-                  {errors.email.message}
-                </p>
+                <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
               )}
-            </motion.div>
+            </div>
 
-            {/* Password Field */}
-            <motion.div variants={slideUp} className="space-y-2">
-              <div className="flex items-center justify-between ml-1">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            {/* Password */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-900 dark:text-white">
                   Password
                 </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-primary-500 transition-colors duration-300">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+                <div className="flex items-center space-x-4">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    Forgot?
+                  </Link>
+
+                  {showResend && (
+                    <Link
+                      to={`/resend-confirmation?email=${encodeURIComponent(watchedEmail)}`}
+                      className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                    >
+                      Resend confirmation
+                    </Link>
+                  )}
                 </div>
+              </div>
+              <div className="relative">
                 <input
                   {...register('password')}
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="w-full h-[56px] pl-12 pr-12 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 dark:focus:border-primary-600 transition-all duration-300 outline-none font-medium"
+                  placeholder=""
+                  className="w-full px-4 py-2.5 pr-12 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                     </svg>
                   ) : (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-red-500 text-xs font-semibold ml-1 animate-fadeIn">
-                  {errors.password.message}
-                </p>
+                <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>
               )}
-
-              {showResend && (
-                <div className="pt-1">
-                  <Link
-                    to={`/resend-confirmation?email=${encodeURIComponent(watchedEmail)}`}
-                    className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 underline transition-colors"
-                  >
-                    Resend confirmation link
-                  </Link>
-                </div>
-              )}
-            </motion.div>
+            </div>
 
             {/* Remember Me */}
-            <motion.div variants={fadeIn} className="flex items-center">
-              <label className="flex items-center cursor-pointer group">
-                <input type="checkbox" className="sr-only" />
-                <div className="w-5 h-5 border-2 border-slate-200 dark:border-white/10 rounded-lg bg-white dark:bg-white/5 transition-all group-hover:border-primary-500 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 rounded-sm bg-primary-500 opacity-0 group-hover:opacity-20 transition-opacity" />
-                </div>
-                <span className="ml-3 text-sm font-medium text-slate-600 dark:text-slate-400">Remember me</span>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="remember"
+                className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-2 focus:ring-primary-500"
+              />
+              <label htmlFor="remember" className="ml-2 text-sm text-slate-600 dark:text-slate-400">
+                Remember me
               </label>
-            </motion.div>
+            </div>
 
             {/* Submit Button */}
-            <motion.div variants={slideUp} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                isLoading={isLoading}
-                className="h-[56px] rounded-2xl font-bold text-base shadow-xl shadow-primary-500/20 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 transition-all duration-300"
-              >
-                Sign in
-              </Button>
-            </motion.div>
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              isLoading={isLoading}
+              className="mt-6"
+            >
+              Login
+            </Button>
           </form>
 
-          {/* Footer Section */}
-          <motion.div variants={fadeIn} className="mt-10 text-center">
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                className="text-primary-600 dark:text-primary-400 font-bold hover:text-primary-700 transition-all"
-              >
-                Create one now
-              </Link>
-            </p>
-          </motion.div>
+          {/* Register Link */}
+          <p className="text-center text-slate-600 dark:text-slate-400 mt-6">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-primary-600 dark:text-primary-400 font-medium hover:underline">
+              Sign up here
+            </Link>
+          </p>
+
+          {/* Demo credentials removed */}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
