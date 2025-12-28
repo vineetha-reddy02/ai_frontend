@@ -1,4 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
+import { useEffect } from 'react';
 import { RootState } from '../store';
 import {
     initiateCall as initiateCallAction,
@@ -91,10 +92,20 @@ export const useVoiceCall = () => {
 
             dispatch(endCallAction());
 
-            const errorMessage = error?.response?.data?.message ||
+            let errorMessage = error?.response?.data?.message ||
                 error?.response?.data?.title ||
                 error?.message ||
                 'Failed to initiate call';
+
+            // Check for specific error scenarios
+            if (errorMessage.toLowerCase().includes('busy') ||
+                errorMessage.toLowerCase().includes('in call') ||
+                errorMessage.toLowerCase().includes('another call')) {
+                errorMessage = 'User is currently in another call. Please try again later.';
+            } else if (errorMessage.toLowerCase().includes('offline') ||
+                errorMessage.toLowerCase().includes('unavailable')) {
+                errorMessage = 'User is currently offline or unavailable.';
+            }
 
             // Show validation errors if present
             const validationErrors = error?.response?.data?.errors;
@@ -325,6 +336,27 @@ export const useVoiceCall = () => {
             return { success: false, error: error?.message };
         }
     };
+
+    /**
+     * Automatically manage user availability status based on call state
+     */
+    useEffect(() => {
+        // Set to 'InCall' when call becomes active
+        if (callState === 'active') {
+            callLogger.info('Setting availability to InCall');
+            callsService.updateAvailability('InCall').catch(err => {
+                callLogger.warning('Failed to set InCall status', err);
+            });
+        }
+
+        // Revert to 'Online' when call ends (becomes idle)
+        if (callState === 'idle' && user) {
+            callLogger.info('Reverting availability to Online');
+            callsService.updateAvailability('Online').catch(err => {
+                callLogger.warning('Failed to revert to Online status', err);
+            });
+        }
+    }, [callState, user]);
 
     return {
         // State

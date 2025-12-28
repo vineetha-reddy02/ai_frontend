@@ -7,6 +7,7 @@ import agoraService from '../../services/agora';
 import {
     endCall,
     setCallStatus,
+    forceResetCallState,
 } from '../../store/callSlice';
 import IncomingCallModal from './IncomingCallModal';
 import ActiveCallOverlay from './ActiveCallOverlay';
@@ -87,12 +88,34 @@ const CallManager: React.FC = () => {
         }
     }, [token, user?.id]);
 
+    // Auto-cleanup stuck states on mount
+    useEffect(() => {
+        // Check if we have a stuck state on mount (e.g., after page refresh)
+        if (callState !== 'idle' && !hasJoinedChannel.current) {
+            callLogger.warning('⚠️ Detected stuck call state on mount - auto-cleaning up', {
+                stuckState: callState,
+                currentCall: currentCall?.callId
+            });
+
+            // Force reset to idle
+            dispatch(forceResetCallState());
+
+            // Update availability back to Online
+            if (user) {
+                callsService.updateAvailability('Online')
+                    .then(() => callLogger.info('Reset availability to Online after cleanup'))
+                    .catch(err => callLogger.warning('Failed to reset availability', err));
+            }
+        }
+    }, []); // Run only once on mount
+
     // 2. Handle Cleanup on Call End
     useEffect(() => {
         if (callState === 'idle') {
             callLogger.debug('Call state is idle, cleaning up Agora resources');
 
             if (hasJoinedChannel.current) {
+                // Agora Cleanup
                 agoraService.leaveChannel()
                     .then(() => {
                         callLogger.info('✅ Left Agora channel');
@@ -104,9 +127,10 @@ const CallManager: React.FC = () => {
         }
     }, [callState]);
 
-    // 3. Handle Mute Toggle with Agora
+    // 3. Handle Mute Toggle
     useEffect(() => {
         if (hasJoinedChannel.current) {
+            // Agora Mute
             agoraService.setMuted(isMuted)
                 .then(() => {
                     callLogger.debug(`Agora audio ${isMuted ? 'muted' : 'unmuted'}`);
@@ -115,113 +139,193 @@ const CallManager: React.FC = () => {
         }
     }, [isMuted]);
 
-    // 4. Agora - Join Channel when call becomes active
+    // 4. Join Agora Channel
     useEffect(() => {
-        const joinAgoraChannel = async () => {
+        const joinChannelWrapper = async () => {
             if (!currentCall || !user) return;
+            // Prevent double join
             if (isJoiningChannel.current || hasJoinedChannel.current) return;
 
             // Only join when call is connecting or active
             if (callState !== 'connecting' && callState !== 'active') return;
 
+            isJoiningChannel.current = true;
+
             try {
-                isJoiningChannel.current = true;
                 callLogger.info('🎙️ Joining Agora channel', {
                     callId: currentCall.callId,
                     userId: user.id
                 });
 
-                // Channel name based on call ID
                 const channelName = `call_${currentCall.callId}`;
-
-                // Convert user GUID to numeric UID for Agora
-                // Backend expects integer, Agora accepts both string and number
                 const numericUid = guidToNumericUid(user.id);
-                const stringUid = user.id; // Keep string for Agora join
 
                 // Fetch Agora token from backend
-                // Backend expects numeric UId parameter
                 let agoraToken: string | null = null;
                 try {
-                    callLogger.debug('Fetching Agora token from backend', {
-                        channelName,
-                        numericUid,
-                        originalGuid: user.id
-                    });
-                    // Send numeric UID to backend (it expects int)
                     const tokenResponse = await callsService.getAgoraToken(channelName, numericUid.toString()) as { token: string };
                     agoraToken = tokenResponse.token || null;
                     callLogger.info('✅ Agora token fetched successfully');
                 } catch (error: any) {
-                    callLogger.warning('Failed to fetch Agora token, using null (App Certificate must be disabled)', error.message);
-                    // Continue with null token - works when App Certificate is disabled
+                    callLogger.warning('Failed to fetch Agora token - proceeding without token', error.message);
+                    // Continue without token (only works if App Certificate is disabled)
                 }
 
                 // Set up Agora event callbacks
                 agoraService.setEventCallbacks({
                     onUserPublished: (remoteUser) => {
-                        callLogger.info('✅ Remote user joined and published audio', {
-                            uid: remoteUser.uid
-                        });
-                        // Update call status to active when remote user joins
+                        callLogger.info('✅ Remote user published audio', { uid: remoteUser.uid });
                         if (callState === 'connecting') {
                             dispatch(setCallStatus('active'));
                         }
                     },
                     onUserLeft: (remoteUser) => {
-                        callLogger.info('👋 Remote user left', {
-                            uid: remoteUser.uid
-                        });
+                        callLogger.info('👋 Remote user left channel', { uid: remoteUser.uid });
                     },
                     onConnectionStateChange: (state) => {
                         callLogger.info(`🔗 Agora connection state: ${state}`);
                         if (state === 'CONNECTED') {
                             dispatch(setCallStatus('active'));
-                        } else if (state === 'DISCONNECTED') {
-                            // Handle disconnection
-                            callLogger.warning('Agora disconnected');
+                        } else if (state === 'DISCONNECTED' || state === 'FAILED') {
+                            callLogger.error('Agora connection failed/disconnected');
+                            // End call on connection failure
+                            dispatch(endCall({ partnerName: currentCall.callerName || currentCall.calleeName || 'Unknown' }));
                         }
                     }
                 });
 
-                // Join the channel with numeric UID
+                // Join Agora channel
                 await agoraService.joinChannel(channelName, agoraToken, numericUid);
 
                 hasJoinedChannel.current = true;
+                isJoiningChannel.current = false;
                 callLogger.info('✅ Successfully joined Agora channel');
-
-                // Update call status to active
                 dispatch(setCallStatus('active'));
 
             } catch (error: any) {
                 callLogger.error('❌ Failed to join Agora channel', error);
                 isJoiningChannel.current = false;
+                hasJoinedChannel.current = false;
 
-                // End call on error
-                if (currentCall) {
-                    try {
-                        await callsService.end(currentCall.callId);
-                    } catch (e) {
-                        callLogger.error('Failed to end call after Agora error', e);
-                    }
-                    dispatch(endCall({ partnerName: currentCall.callerName || currentCall.calleeName || 'Unknown' }));
-                }
+                // End call on failure
+                const partnerName = currentCall.callerName || currentCall.calleeName || 'Unknown';
+                dispatch(endCall({ partnerName }));
+
+                // Show error to user
+                import('../../store/uiSlice').then(({ showToast }) => {
+                    dispatch(showToast({
+                        message: 'Failed to connect to voice call. Please try again.',
+                        type: 'error'
+                    }) as any);
+                });
             }
         };
 
-        joinAgoraChannel();
+        joinChannelWrapper();
     }, [callState, currentCall, user, dispatch]);
 
     // 5. Cleanup on unmount
     useEffect(() => {
         return () => {
             if (hasJoinedChannel.current) {
-                callLogger.info('Component unmounting, leaving Agora channel');
-                agoraService.leaveChannel()
-                    .catch(err => callLogger.error('Error during unmount cleanup', err));
+                agoraService.leaveChannel().catch(err => callLogger.error('Error during unmount cleanup', err));
             }
         };
     }, []);
+
+    // 6. Emergency Reset - Keyboard Shortcut (Ctrl+Shift+R) for debugging
+    useEffect(() => {
+        const handleKeyPress = (e: KeyboardEvent) => {
+            // Ctrl+Shift+R (or Cmd+Shift+R on Mac)
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
+                e.preventDefault();
+                callLogger.warning('🚨 Emergency reset triggered via keyboard shortcut');
+
+                // Leave Agora if joined
+                if (hasJoinedChannel.current) {
+                    agoraService.leaveChannel().catch(err =>
+                        callLogger.error('Error leaving channel during emergency reset', err)
+                    );
+                    hasJoinedChannel.current = false;
+                    isJoiningChannel.current = false;
+                }
+
+                // Force reset Redux state
+                dispatch(forceResetCallState());
+
+                // Reset availability
+                callsService.updateAvailability('Online').catch(err =>
+                    callLogger.error('Error resetting availability', err)
+                );
+
+                // Show confirmation
+                import('../../store/uiSlice').then(({ showToast }) => {
+                    dispatch(showToast({
+                        message: '🚨 Call state force-reset complete',
+                        type: 'info'
+                    }) as any);
+                });
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [dispatch]);
+
+    // Expose emergency reset function globally for console debugging
+    useEffect(() => {
+        (window as any).forceResetCall = () => {
+            callLogger.warning('🚨 Emergency reset triggered via console');
+
+            if (hasJoinedChannel.current) {
+                agoraService.leaveChannel().catch(err =>
+                    callLogger.error('Error leaving channel during emergency reset', err)
+                );
+                hasJoinedChannel.current = false;
+                isJoiningChannel.current = false;
+            }
+
+            dispatch(forceResetCallState());
+            callsService.updateAvailability('Online').catch(err =>
+                callLogger.error('Error resetting availability', err)
+            );
+
+            console.log('✅ Call state force-reset complete. You can now receive calls.');
+        };
+
+        return () => {
+            delete (window as any).forceResetCall;
+        };
+    }, [dispatch]);
+
+    // 7. Handle browser close/refresh during active call
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (callState !== 'idle' && currentCall) {
+                callLogger.warning('Browser closing/refreshing during active call');
+
+                // End the call via API
+                callsService.end(currentCall.callId, 'Browser closed/refreshed').catch(err => {
+                    callLogger.error('Failed to end call on browser close', err);
+                });
+
+                // Leave Agora channel
+                if (hasJoinedChannel.current) {
+                    agoraService.leaveChannel().catch(err => {
+                        callLogger.error('Failed to leave Agora channel on browser close', err);
+                    });
+                }
+
+                // Show browser confirmation (some browsers support this)
+                e.preventDefault();
+                e.returnValue = 'You are currently in a voice call. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [callState, currentCall]);
 
     return (
         <>
@@ -246,4 +350,3 @@ const CallManager: React.FC = () => {
 };
 
 export default CallManager;
-

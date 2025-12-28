@@ -16,17 +16,18 @@ const CallingModal: React.FC = () => {
     const { cancelCall } = useVoiceCall();
     const [timeElapsed, setTimeElapsed] = useState(0);
 
-    // Show this modal when we are in 'ringing' state (outgoing call)
-    const shouldShow = callState === 'ringing' && currentCall;
+    // Show this modal when we are in 'ringing' or 'connecting' state (outgoing call)
+    const shouldShow = (callState === 'ringing' || callState === 'connecting') && currentCall;
 
     useEffect(() => {
         if (shouldShow) {
             callLogger.info('CallingModal displayed', {
                 callId: currentCall?.callId,
-                calleeName: currentCall?.calleeName
+                calleeName: currentCall?.calleeName,
+                state: callState
             });
         }
-    }, [shouldShow, currentCall?.callId, currentCall?.calleeName]);
+    }, [shouldShow, currentCall?.callId, currentCall?.calleeName, callState]);
 
     // Timer for elapsed time
     useEffect(() => {
@@ -38,19 +39,21 @@ const CallingModal: React.FC = () => {
 
                     // Log every 10 seconds
                     if (newTime % 10 === 0) {
-                        callLogger.debug(`Calling - ${newTime}s elapsed`, {
+                        callLogger.debug(`${callState} - ${newTime}s elapsed`, {
                             callId: currentCall?.callId
                         });
                     }
 
-                    // Auto-cancel after 60 seconds (should be handled by backend too)
-                    if (newTime >= 60) {
-                        callLogger.warning('Call invitation timeout (60s)', {
-                            callId: currentCall?.callId
+                    // Auto-cancel after 60 seconds for ringing, 30 seconds for connecting
+                    const timeout = callState === 'ringing' ? 60 : 30;
+                    if (newTime >= timeout) {
+                        callLogger.warning(`Call ${callState} timeout (${timeout}s)`, {
+                            callId: currentCall?.callId,
+                            state: callState
                         });
                         handleCancel();
                         clearInterval(timer);
-                        return 60;
+                        return timeout;
                     }
 
                     return newTime;
@@ -59,7 +62,7 @@ const CallingModal: React.FC = () => {
 
             return () => clearInterval(timer);
         }
-    }, [shouldShow, currentCall?.callId]);
+    }, [shouldShow, currentCall?.callId, callState]);
 
     if (!shouldShow || !currentCall) return null;
 

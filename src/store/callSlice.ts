@@ -177,6 +177,18 @@ export const callSlice = createSlice({
     setCallHistory: (state, action: PayloadAction<VoiceCall[]>) => {
       state.callHistory = action.payload;
     },
+
+    // Emergency cleanup for stuck states
+    forceResetCallState: (state) => {
+      state.currentCall = null;
+      state.isCallActive = false;
+      state.callState = 'idle';
+      state.incomingInvitation = null;
+      state.durationSeconds = 0;
+      state.isMuted = false;
+      state.showRatingModal = false;
+      state.lastCompletedCall = null;
+    },
   },
 });
 
@@ -198,6 +210,7 @@ export const {
   closeRatingModal,
   addCallToHistory,
   setCallHistory,
+  forceResetCallState,
 } = callSlice.actions;
 
 export default callSlice.reducer;

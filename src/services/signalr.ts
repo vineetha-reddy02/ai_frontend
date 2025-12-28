@@ -12,12 +12,6 @@ import {
 import { callLogger } from '../utils/callLogger';
 
 // Event types based on the spec
-export interface IceCandidatePayload {
-    candidate: string;
-    sdpMid: string;
-    sdpMLineIndex: number;
-}
-
 class SignalRService {
     private connection: signalR.HubConnection | null = null;
     private token: string | null = null;
@@ -170,23 +164,6 @@ class SignalRService {
         callLogger.info('Left call session', { callId });
     }
 
-    public async sendOffer(callId: string, sdpOffer: string): Promise<void> {
-        callLogger.signalrInvoke('SendOffer', { callId, sdpLength: sdpOffer.length });
-        callLogger.sdp('offer', 'sent', callId);
-        await this.invoke('SendOffer', callId, sdpOffer);
-    }
-
-    public async sendAnswer(callId: string, sdpAnswer: string): Promise<void> {
-        callLogger.signalrInvoke('SendAnswer', { callId, sdpLength: sdpAnswer.length });
-        callLogger.sdp('answer', 'sent', callId);
-        await this.invoke('SendAnswer', callId, sdpAnswer);
-    }
-
-    public async sendIceCandidate(callId: string, candidate: IceCandidatePayload): Promise<void> {
-        callLogger.iceCandidate('sent', candidate);
-        await this.invoke('SendIceCandidate', callId, candidate);
-    }
-
     public async notifyCallActive(callId: string): Promise<void> {
         callLogger.signalrInvoke('NotifyCallActive', { callId });
         await this.invoke('NotifyCallActive', callId);
@@ -205,66 +182,6 @@ class SignalRService {
             callLogger.error(`Error invoking ${methodName}`, err);
             throw err;
         }
-    }
-
-    // --- Event Handlers (Server -> Client) ---
-
-    // --- Event Buffering & Dispatch ---
-
-    private messageBuffer = {
-        offers: [] as string[],
-        answers: [] as string[],
-        candidates: [] as IceCandidatePayload[]
-    };
-
-    private externalHandlers = {
-        onReceiveOffer: null as ((sdp: string) => void) | null,
-        onReceiveAnswer: null as ((sdp: string) => void) | null,
-        onReceiveIceCandidate: null as ((candidate: IceCandidatePayload) => void) | null
-    };
-
-    // --- External Event Subscription (for CallManager) ---
-
-    public onReceiveOffer(callback: (sdp: string) => void) {
-        this.externalHandlers.onReceiveOffer = callback;
-
-        // Flush buffer immediately
-        if (this.messageBuffer.offers.length > 0) {
-            callLogger.info(`Flushing ${this.messageBuffer.offers.length} buffered Offers`);
-            this.messageBuffer.offers.forEach(sdp => callback(sdp));
-            this.messageBuffer.offers = [];
-        }
-    }
-
-    public onReceiveAnswer(callback: (sdp: string) => void) {
-        this.externalHandlers.onReceiveAnswer = callback;
-
-        if (this.messageBuffer.answers.length > 0) {
-            callLogger.info(`Flushing ${this.messageBuffer.answers.length} buffered Answers`);
-            this.messageBuffer.answers.forEach(sdp => callback(sdp));
-            this.messageBuffer.answers = [];
-        }
-    }
-
-    public onReceiveIceCandidate(callback: (candidate: IceCandidatePayload) => void) {
-        this.externalHandlers.onReceiveIceCandidate = callback;
-
-        if (this.messageBuffer.candidates.length > 0) {
-            callLogger.debug(`Flushing ${this.messageBuffer.candidates.length} buffered ICE Candidates`);
-            this.messageBuffer.candidates.forEach(candidate => callback(candidate));
-            this.messageBuffer.candidates = [];
-        }
-    }
-
-    public offWebRTC() {
-        callLogger.debug('Removing WebRTC event handlers');
-        this.externalHandlers.onReceiveOffer = null;
-        this.externalHandlers.onReceiveAnswer = null;
-        this.externalHandlers.onReceiveIceCandidate = null;
-
-        // Optional: Clear buffers on unmount? Or keep them just in case?
-        // Better to clear to avoid stale signals on next call.
-        this.messageBuffer = { offers: [], answers: [], candidates: [] };
     }
 
     // --- Event Handlers (Server -> Client) ---
@@ -295,6 +212,35 @@ class SignalRService {
                 timestamp: payload.timestamp || payload.Timestamp,
                 expiresInSeconds: payload.expiresInSeconds || payload.ExpiresInSeconds || 60
             };
+
+            // Check if user is already in a call
+            const state = store.getState();
+            const currentCallState = state.call.callState;
+
+            if (currentCallState !== 'idle') {
+                // User is busy, auto-reject the incoming call
+                callLogger.warning(`⛔ Auto-rejecting call from ${normalizedPayload.callerName} - User already in a call`, {
+                    callId: normalizedPayload.callId,
+                    currentState: currentCallState
+                });
+
+                // Reject the call via API
+                import('../services/calls').then(({ callsService }) => {
+                    callsService.respond(normalizedPayload.callId, false).catch(err => {
+                        callLogger.error('Failed to auto-reject call', err);
+                    });
+                });
+
+                // Show toast notification
+                import('../store/uiSlice').then(({ showToast }) => {
+                    store.dispatch(showToast({
+                        message: `Missed call from ${normalizedPayload.callerName} - You were in another call`,
+                        type: 'info'
+                    }));
+                });
+
+                return; // Don't show the incoming call invitation
+            }
 
             callLogger.info(`🔔 Incoming call from ${normalizedPayload.callerName}`, {
                 callId: normalizedPayload.callId,
@@ -375,49 +321,27 @@ class SignalRService {
             callLogger.warning(`⏰ ${payload.remainingMinutes} minutes remaining`, payload);
         });
 
-        // WebRTC Signaling Events
+        // 7. CallUserBusy (when trying to call someone already in a call)
+        register('CallUserBusy', (payload: any) => {
+            callLogger.signalrEvent('CallUserBusy', payload);
+            const userName = payload.userName || payload.UserName || 'User';
+            callLogger.warning(`⛔ User is busy: ${userName}`, payload);
 
-        // 7. ReceiveOffer
-        register('ReceiveOffer', (sdp: string) => {
-            callLogger.signalrEvent('ReceiveOffer', { sdpLength: sdp.length });
-            callLogger.sdp('offer', 'received', 'current');
+            // Clean up current call state
+            store.dispatch(endCall());
 
-            if (this.externalHandlers.onReceiveOffer) {
-                this.externalHandlers.onReceiveOffer(sdp);
-            } else {
-                callLogger.info('Buffered Offer (no handler attached)');
-                this.messageBuffer.offers.push(sdp);
-            }
-        });
-
-        // 8. ReceiveAnswer
-        register('ReceiveAnswer', (sdp: string) => {
-            callLogger.signalrEvent('ReceiveAnswer', { sdpLength: sdp.length });
-            callLogger.sdp('answer', 'received', 'current');
-
-            if (this.externalHandlers.onReceiveAnswer) {
-                this.externalHandlers.onReceiveAnswer(sdp);
-            } else {
-                callLogger.info('Buffered Answer (no handler attached)');
-                this.messageBuffer.answers.push(sdp);
-            }
-        });
-
-        // 9. ReceiveIceCandidate
-        register('ReceiveIceCandidate', (candidate: IceCandidatePayload) => {
-            callLogger.signalrEvent('ReceiveIceCandidate', {
-                sdpMid: candidate.sdpMid,
-                sdpMLineIndex: candidate.sdpMLineIndex
+            // Show toast notification
+            import('../store/uiSlice').then(({ showToast }) => {
+                store.dispatch(showToast({
+                    message: `${userName} is currently in another call`,
+                    type: 'warning'
+                }));
             });
-            callLogger.iceCandidate('received', candidate);
-
-            if (this.externalHandlers.onReceiveIceCandidate) {
-                this.externalHandlers.onReceiveIceCandidate(candidate);
-            } else {
-                // Buffer candidates too, they are critical
-                this.messageBuffer.candidates.push(candidate);
-            }
         });
+
+        // Note: WebRTC signaling events (ReceiveOffer, ReceiveAnswer, ReceiveIceCandidate) 
+        // have been removed as we're using pure Agora for audio streaming.
+        // Agora handles its own media negotiation internally.
 
         callLogger.info('SignalR event handlers registered (Case-Insensitive)');
     }

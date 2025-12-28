@@ -12,7 +12,7 @@ export const callsService = {
   searchUsers: async (searchTerm: string, language?: string) =>
     apiService.get('/calls/search-users', { params: { searchTerm, language } }),
 
-  updateAvailability: async (status: 'Online' | 'Offline') =>
+  updateAvailability: async (status: 'Online' | 'Offline' | 'InCall') =>
     apiService.put('/calls/availability', { status }),
 
   // Call Management
