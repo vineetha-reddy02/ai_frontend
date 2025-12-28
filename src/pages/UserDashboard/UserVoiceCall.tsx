@@ -121,20 +121,23 @@ const UserVoiceCall: React.FC = () => {
                 // Exclude current user from list
                 if (user.userId === currentUser?.id || user.id === currentUser?.id) return false;
 
-                // STRICT: Only show users who are explicitly online
-                let isOnline = false;
-                if (user.isOnline !== undefined) {
-                    isOnline = user.isOnline === true;
-                } else if (user.status === 'online' || user.status === 'Online') {
-                    isOnline = true;
-                } else if (user.availability === 'Online') {
-                    isOnline = true;
+                // STRICT STATUS CHECK: Only show users with status exactly 'Online'
+                // This automatically excludes:
+                // - 'Busy' users
+                // - 'InCall' users (already in active calls)
+                // - 'Offline' users
+                const status = user.status || user.availability || '';
+                const statusLower = status.toLowerCase();
+
+                if (statusLower !== 'online') {
+                    // Log why user was excluded for debugging
+                    if (statusLower === 'busy' || statusLower === 'incall') {
+                        callLogger.debug(`Excluding user ${user.userId || user.id} (${user.fullName}): status is ${status}`);
+                    }
+                    return false;
                 }
 
-                // If not online, exclude immediately
-                if (!isOnline) return false;
-
-                // NEW: Check subscription/trial status to exclude expired users
+                // Subscription/trial validation
                 const subStatus = (user.subscriptionStatus || user.subscription?.status || '').toLowerCase();
 
                 // Exclude users with explicitly expired, cancelled, or past_due subscriptions
@@ -272,6 +275,17 @@ const UserVoiceCall: React.FC = () => {
                 message: errorMessage,
                 validationErrors
             });
+
+            // Auto-refresh available users if the error was due to user being busy
+            const errorStr = typeof errorMessage === 'string' ? errorMessage.toLowerCase() : '';
+            if (errorStr.includes('busy') ||
+                errorStr.includes('in call') ||
+                errorStr.includes('incall') ||
+                errorStr.includes('another call') ||
+                errorStr.includes('not joinable')) {
+                callLogger.info('🔄 User was busy, refreshing available users list');
+                fetchAvailableUsers({ silent: true });
+            }
 
             dispatch(showToast({
                 message: errorMessage,
@@ -427,7 +441,7 @@ const UserVoiceCall: React.FC = () => {
 
                             {availableUsers.length === 0 && !loading && (
                                 <p className="text-sm text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-4 py-2 rounded-lg border border-amber-100 dark:border-amber-800">
-                                    No users currently online. Try again in a moment.
+                                    No available users right now. All users are either offline or in active calls. Try again in a moment.
                                 </p>
                             )}
                         </div>

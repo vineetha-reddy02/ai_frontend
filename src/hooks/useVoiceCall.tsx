@@ -100,8 +100,10 @@ export const useVoiceCall = () => {
             // Check for specific error scenarios
             if (errorMessage.toLowerCase().includes('busy') ||
                 errorMessage.toLowerCase().includes('in call') ||
-                errorMessage.toLowerCase().includes('another call')) {
-                errorMessage = 'User is currently in another call. Please try again later.';
+                errorMessage.toLowerCase().includes('incall') ||
+                errorMessage.toLowerCase().includes('another call') ||
+                errorMessage.toLowerCase().includes('not joinable')) {
+                errorMessage = 'This user is already in a call. Please try calling someone else.';
             } else if (errorMessage.toLowerCase().includes('offline') ||
                 errorMessage.toLowerCase().includes('unavailable')) {
                 errorMessage = 'User is currently offline or unavailable.';
