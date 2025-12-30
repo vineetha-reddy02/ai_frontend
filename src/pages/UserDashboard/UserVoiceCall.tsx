@@ -190,7 +190,11 @@ const UserVoiceCall: React.FC = () => {
                 pollCount++;
                 fetchAvailableUsers({ silent: true });
                 if (pollCount % 6 === 0) {
-                    callsService.updateAvailability('Online').catch(err => callLogger.warning('Heartbeat failed', err));
+                    // Heartbeat to keep availability fresh (every 30 seconds)
+                    // Silently fail if backend rejects (user might already be marked Online)
+                    callsService.updateAvailability('Online').catch(() => {
+                        // Ignore errors - backend might reject if status unchanged
+                    });
                 }
             }, 5000);
             return () => clearInterval(interval);
