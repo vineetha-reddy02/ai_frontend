@@ -14,6 +14,7 @@ import {
     setCallStatus,
     VoiceCall
 } from '../../store/callSlice';
+import { RootState } from '../../store';
 import { callLogger } from '../../utils/callLogger';
 
 const UserVoiceCall: React.FC = () => {
