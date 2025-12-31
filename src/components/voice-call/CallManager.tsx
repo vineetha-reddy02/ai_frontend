@@ -237,6 +237,16 @@ const CallManager: React.FC = () => {
                     },
                     onUserLeft: (remoteUser) => {
                         callLogger.info('👋 Remote user left channel', { uid: remoteUser.uid });
+                        // End call immediately when partner leaves
+                        const partnerName = currentCall.callerName || currentCall.calleeName || 'Unknown';
+                        dispatch(endCall({ partnerName }));
+
+                        import('../../store/uiSlice').then(({ showToast }) => {
+                            dispatch(showToast({
+                                message: 'Call ended: Partner disconnected',
+                                type: 'info'
+                            }) as any);
+                        });
                     },
                     onConnectionStateChange: (state) => {
                         callLogger.info(`🔗 Agora connection state: ${state}`);

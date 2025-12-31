@@ -365,14 +365,19 @@ class SignalRService {
             }
 
             // Bypass backend duration limits as per user request
+            // REMOVED: respecting backend termination to prevent stuck calls
+            /*
             if (reason && reason.toLowerCase().includes('maximum duration exceeded')) {
                 callLogger.warning(`⚠️ Ignoring backend forced termination: ${reason}`, {
                     callId
                 });
                 return;
             }
+            */
 
             // Check for other backend-initiated endings that should be ignored
+            // REMOVED: We now respect ALL backend termination signals to avoid desync
+            /*
             if (reason && (
                 reason.toLowerCase().includes('timeout') ||
                 reason.toLowerCase().includes('duration limit') ||
@@ -381,6 +386,7 @@ class SignalRService {
                 callLogger.warning(`⚠️ Ignoring backend timeout: ${reason}`, { callId });
                 return;
             }
+            */
 
             callLogger.info(`📞 Call ended: ${reason}`, {
                 callId,
