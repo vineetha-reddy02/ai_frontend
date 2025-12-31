@@ -366,7 +366,7 @@ const UserProfile: React.FC = () => {
                     </div>
 
                     {isEditing && (
-                        <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-200/50 dark:border-white/5 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center justify-center sm:justify-start gap-4 mt-8 pt-6 border-t border-slate-200/50 dark:border-white/5 animate-in fade-in slide-in-from-top-2">
                             <Button onClick={handleUpdateProfile} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30">
                                 <Save size={18} className="mr-2" />
                                 {t('profilePage.saveChanges')}
@@ -414,13 +414,13 @@ const UserProfile: React.FC = () => {
                         <button
                             key={tab.id}
                             onClick={() => handleTabChange(tab.id)}
-                            className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${isActive
+                            className={`flex-1 min-w-fit md:min-w-[120px] flex items-center justify-center gap-2 px-3 md:px-4 py-3 rounded-xl font-bold transition-all duration-300 ${isActive
                                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-md'
                                 : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/5'
                                 }`}
                         >
                             <Icon size={18} className={isActive ? 'animate-bounce-subtle' : ''} />
-                            {tab.label}
+                            <span className="hidden md:block">{tab.label}</span>
                         </button>
                     );
                 })}

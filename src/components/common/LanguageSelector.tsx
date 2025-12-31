@@ -108,7 +108,7 @@ export const LanguageSelector: React.FC = () => {
             {/* Dropdown Menu */}
             {isOpen && (
                 <div
-                    className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg shadow-slate-200/50 dark:shadow-black/50 py-2 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-left sm:origin-top-right"
+                    className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg shadow-slate-200/50 dark:shadow-black/50 py-2 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-right"
                     role="listbox"
                 >
                     <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">

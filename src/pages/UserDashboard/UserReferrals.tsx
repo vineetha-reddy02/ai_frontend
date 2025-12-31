@@ -158,27 +158,30 @@ const UserReferrals: React.FC = () => {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-slate-200 dark:border-white/5 text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-50/50 dark:bg-white/5">
-                                <th className="py-4 px-6">{t('referrals.user')}</th>
-                                <th className="py-4 px-6">{t('referrals.date')}</th>
-                                <th className="py-4 px-6">{t('referrals.status')}</th>
-                                <th className="py-4 px-6 text-right">{t('referrals.reward')}</th>
+                                <th className="py-3 px-2 sm:py-4 sm:px-6">{t('referrals.user')}</th>
+                                <th className="hidden sm:table-cell py-3 px-2 sm:py-4 sm:px-6">{t('referrals.date')}</th>
+                                <th className="py-3 px-2 sm:py-4 sm:px-6">{t('referrals.status')}</th>
+                                <th className="py-3 px-2 sm:py-4 sm:px-6 text-right">{t('referrals.reward')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                             {history.length > 0 ? (
                                 history.map((item, i) => (
-                                    <tr key={i} className="text-sm hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                                        <td className="py-4 px-6 font-bold text-slate-900 dark:text-white">{item.refereeName || 'Anonymous User'}</td>
-                                        <td className="py-4 px-6 text-slate-500 font-medium">{new Date(item.createdAt).toLocaleDateString()}</td>
-                                        <td className="py-4 px-6">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${['converted', 'completed'].includes((item.status || '').toLowerCase())
+                                    <tr key={i} className="text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                        <td className="py-3 px-2 sm:py-4 sm:px-6 font-bold text-slate-900 dark:text-white truncate max-w-[80px] sm:max-w-none">
+                                            <div>{item.refereeName || 'Anonymous User'}</div>
+                                            <div className="text-[10px] text-slate-500 font-normal sm:hidden">{new Date(item.createdAt).toLocaleDateString()}</div>
+                                        </td>
+                                        <td className="hidden sm:table-cell py-3 px-2 sm:py-4 sm:px-6 text-slate-500 font-medium whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString()}</td>
+                                        <td className="py-3 px-2 sm:py-4 sm:px-6">
+                                            <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border ${['converted', 'completed'].includes((item.status || '').toLowerCase())
                                                 ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
                                                 : 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
                                                 }`}>
                                                 {item.status ? t(`referrals.${item.status.toLowerCase()}`) : t('referrals.pending')}
                                             </span>
                                         </td>
-                                        <td className="py-4 px-6 text-right font-bold text-green-600 dark:text-green-400">
+                                        <td className="py-3 px-2 sm:py-4 sm:px-6 text-right font-bold text-green-600 dark:text-green-400">
                                             {item.rewardAmount ? `₹${item.rewardAmount}` : '-'}
                                         </td>
                                     </tr>

@@ -368,15 +368,17 @@ const UserSubscriptions: React.FC = () => {
 
                                 {/* Badges */}
                                 {isLocked && (
-                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-green-500 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 z-20">
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-green-500 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 z-30">
                                         <Check size={14} strokeWidth={3} />
                                         <span>Current Plan</span>
                                     </div>
                                 )}
                                 {isYearlyPlan && !isLocked && (
-                                    <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 rotate-12 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold px-4 py-1 shadow-lg z-20 overflow-visible">
-                                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                                        BEST VALUE
+                                    <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none z-20">
+                                        <div className="absolute top-5 -right-12 w-40 rotate-45 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold py-1 shadow-lg flex justify-center items-center">
+                                            <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                                            BEST VALUE
+                                        </div>
                                     </div>
                                 )}
 

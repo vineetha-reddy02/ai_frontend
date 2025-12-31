@@ -119,7 +119,7 @@ const UserSettingsPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex justify-end pt-4">
+                    <div className="flex justify-center sm:justify-end pt-4">
                         <Button
                             onClick={handleSave}
                             isLoading={loading}

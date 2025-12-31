@@ -347,16 +347,16 @@ const UserWallet: React.FC = () => {
                         transactions.map((tx) => {
                             const style = getTransactionStyle(tx.type);
                             return (
-                                <div key={tx.id} className="p-5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div className="flex items-start gap-4 flex-1">
-                                            <div className={`p-3 rounded-2xl ${style.bgColor} ${style.textColor} group-hover:scale-110 transition-transform`}>
+                                <div key={tx.id} className="p-3 sm:p-5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                                    <div className="flex justify-between items-start gap-3 sm:gap-4">
+                                        <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                                            <div className={`p-2 sm:p-3 rounded-2xl ${style.bgColor} ${style.textColor} group-hover:scale-110 transition-transform shrink-0`}>
                                                 {style.icon}
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="font-bold text-slate-900 dark:text-white text-base">{getTranslatedDescription(tx.description || tx.type)}</p>
-                                                    {getStatusBadge(tx.status)}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                                                    <p className="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">{getTranslatedDescription(tx.description || tx.type)}</p>
+                                                    <div className="shrink-0">{getStatusBadge(tx.status)}</div>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
                                                     <span>

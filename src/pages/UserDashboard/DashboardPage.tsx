@@ -127,7 +127,7 @@ const DashboardPage: React.FC = () => {
                                 <button
                                     key={tab.id}
                                     onClick={() => handleTabChange(tab.id)}
-                                    className={`relative flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl font-bold transition-all duration-300 flex-1 min-w-[100px] whitespace-nowrap overflow-hidden group ${isActive
+                                    className={`relative flex items-center justify-center gap-2 px-3 md:px-6 py-3 rounded-xl font-bold transition-all duration-300 flex-1 min-w-fit md:min-w-[100px] whitespace-nowrap overflow-hidden group ${isActive
                                         ? 'text-white shadow-lg shadow-violet-500/30'
                                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-white/5'
                                         }`}
@@ -138,7 +138,7 @@ const DashboardPage: React.FC = () => {
                                     )}
 
                                     <Icon className={`w-5 h-5 relative z-10 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                                    <span className="relative z-10 text-sm md:text-base">{tab.label}</span>
+                                    <span className="relative z-10 text-sm md:text-base hidden md:block">{tab.label}</span>
                                 </button>
                             );
                         })}
