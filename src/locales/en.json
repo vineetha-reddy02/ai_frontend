@@ -80,7 +80,8 @@
       "trialExpired": "Trial Expired",
       "noPlanDesc": "You don't have any active plan.",
       "trialExpiredDesc": "Your free trial has ended.",
-      "unlockPrompt": "Please subscribe to unlock content."
+      "unlockPrompt": "Please subscribe to unlock content.",
+      "unlockButton": "Unlock Premium"
     }
   },
   "profilePage": {
@@ -602,7 +603,7 @@
       "privacy": "Privacy",
       "terms": "Terms",
       "contact": "Contact",
-      "bottomBarText": "© 2024 EduTalks. All rights reserved.",
+      "copyright": "© 2024 EduTalks. All rights reserved.",
       "madeWith": "Made with ❤️ for English learners worldwide"
     }
   },

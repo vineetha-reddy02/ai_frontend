@@ -75,6 +75,12 @@ export const useVoiceCall = () => {
 
             callLogger.info('Call initiated successfully', { callId: callData.id || callData.callId });
 
+            // Force availability to Offline so user disappears from list
+            // We do this optimistically to prevent new calls
+            callsService.updateAvailability('Offline').catch(err =>
+                callLogger.warning('Failed to set busy status on initiate', err)
+            );
+
             return { success: true, callId: callData.id || callData.callId };
         } catch (error: any) {
             callLogger.error('Failed to initiate call', error);
@@ -169,6 +175,11 @@ export const useVoiceCall = () => {
             callLogger.stateTransition('incoming', 'connecting', callId);
 
             callLogger.info('Call accepsted successfully', { callId });
+
+            // Force availability to Offline so user disappears from list
+            callsService.updateAvailability('Offline').catch(err =>
+                callLogger.warning('Failed to set busy status on accept', err)
+            );
 
             return { success: true };
         } catch (error: any) {

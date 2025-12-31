@@ -22,6 +22,7 @@ const UserVoiceCall: React.FC = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { user: currentUser } = useSelector((state: RootState) => state.auth);
+    const { callState } = useSelector((state: RootState) => state.call); // Add callState
     const { initiateCall } = useVoiceCall();
 
     const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
@@ -191,12 +192,11 @@ const UserVoiceCall: React.FC = () => {
                 fetchAvailableUsers({ silent: true });
                 if (pollCount % 6 === 0) {
                     // Heartbeat to keep availability fresh (every 30 seconds)
-                    // Silently fail if backend rejects (user might already be marked Online)
-                    // Only pulse if user intends to be online
+                    // Only pulse if user intends to be online AND is NOT in a call
                     const pref = localStorage.getItem('user_availability_preference');
-                    if (pref !== 'offline') {
+                    if (pref !== 'offline' && callState === 'idle') {
                         callsService.updateAvailability('Online').catch(() => {
-                            // Ignore errors - backend might reject if status unchanged
+                            // Ignore errors
                         });
                     }
                 }

@@ -80,7 +80,8 @@
             "trialExpired": "परीक्षण समाप्त",
             "noPlanDesc": "आपके पास कोई सक्रिय योजना नहीं है।",
             "trialExpiredDesc": "आपका नि: शुल्क परीक्षण समाप्त हो गया है।",
-            "unlockPrompt": "सामग्री अनलॉक करने के लिए कृपया सदस्यता लें।"
+            "unlockPrompt": "सामग्री अनलॉक करने के लिए कृपया सदस्यता लें।",
+            "unlockButton": "प्रीमियम अनलॉक करें"
         }
     },
     "quiz": {
@@ -598,7 +599,7 @@
             "button": "Create Free Account"
         },
         "footer": {
-            "bottomBarText": " 2024 EduTalks. All rights reserved.",
+            "copyright": " 2024 EduTalks. All rights reserved.",
             "stayUpdated": {
                 "placeholder": "Enter your email",
                 "title": "Stay Updated",

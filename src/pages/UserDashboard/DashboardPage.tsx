@@ -128,8 +128,8 @@ const DashboardPage: React.FC = () => {
                                     key={tab.id}
                                     onClick={() => handleTabChange(tab.id)}
                                     className={`relative flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl font-bold transition-all duration-300 flex-1 min-w-[100px] whitespace-nowrap overflow-hidden group ${isActive
-                                            ? 'text-white shadow-lg shadow-violet-500/30'
-                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-white/5'
+                                        ? 'text-white shadow-lg shadow-violet-500/30'
+                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-white/5'
                                         }`}
                                 >
                                     {/* Active Background Gradient */}
@@ -161,14 +161,14 @@ const DashboardPage: React.FC = () => {
                                     <Wallet size={32} />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white mb-2">
-                                    {isExplicitlyCancelled ? 'No Active Plan' : 'Trial Expired'}
+                                    {isExplicitlyCancelled ? t('dashboard.lockOverlay.noPlan') : t('dashboard.lockOverlay.trialExpired')}
                                 </h3>
                                 <p className="text-slate-300 mb-6 leading-relaxed">
                                     {isExplicitlyCancelled
-                                        ? "You don't have any active plan."
-                                        : "Your free trial has ended."}
+                                        ? t('dashboard.lockOverlay.noPlanDesc')
+                                        : t('dashboard.lockOverlay.trialExpiredDesc')}
                                     <br />
-                                    Please subscribe to unlock content.
+                                    {t('dashboard.lockOverlay.unlockPrompt')}
                                 </p>
                                 <button
                                     className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 transition-all hover:scale-[1.02]"
@@ -177,7 +177,7 @@ const DashboardPage: React.FC = () => {
                                         navigate('/subscriptions');
                                     }}
                                 >
-                                    Unlock Premium
+                                    {t('dashboard.lockOverlay.unlockButton')}
                                 </button>
                             </div>
                         </div>
