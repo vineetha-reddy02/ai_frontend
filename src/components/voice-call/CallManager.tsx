@@ -34,6 +34,12 @@ const CallManager: React.FC = () => {
     const incomingAudioRef = useRef<HTMLAudioElement | null>(null);
     const isJoiningChannel = useRef<boolean>(false);
     const hasJoinedChannel = useRef<boolean>(false);
+    const callStateRef = useRef(callState);
+
+    // Update ref when state changes
+    useEffect(() => {
+        callStateRef.current = callState;
+    }, [callState]);
 
     // Log state changes for debugging
     useEffect(() => {
@@ -75,10 +81,15 @@ const CallManager: React.FC = () => {
                     // Automatically set availability to Online (or preferred status)
                     // Add small delay to ensure connection is fully stabilized
                     setTimeout(() => {
-                        const preferredStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
-                        callsService.updateAvailability(preferredStatus as 'Online' | 'Offline')
-                            .then(() => callLogger.info(`Updated availability to ${preferredStatus}`))
-                            .catch(err => callLogger.warning('Failed to auto-set availability', err));
+                        // Only set availability if we are NOT in a call
+                        if (callStateRef.current === 'idle') {
+                            const preferredStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
+                            callsService.updateAvailability(preferredStatus as 'Online' | 'Offline')
+                                .then(() => callLogger.info(`Updated availability to ${preferredStatus}`))
+                                .catch(err => callLogger.warning('Failed to auto-set availability', err));
+                        } else {
+                            callLogger.info('Skipping availability update due to active call');
+                        }
                     }, 250);
                 })
                 .catch(async (error) => {
@@ -87,54 +98,56 @@ const CallManager: React.FC = () => {
 
             // Try to set availability, and if it fails due to "active call", try to clean up
             const preferredStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
-            callsService.updateAvailability(preferredStatus as 'Online' | 'Offline')
-                .then(() => callLogger.info(`Updated availability to ${preferredStatus}`))
-                .catch(async (err) => {
-                    callLogger.warning('Failed to auto-set availability', err);
 
-                    const errMsg = JSON.stringify(err);
-                    if (errMsg.toLowerCase().includes('active or pending call')) {
-                        callLogger.warning('⚠️ User seems to be stuck in a call. Attempting emergency cleanup...');
+            // Only attempt if idle
+            if (callStateRef.current === 'idle') {
+                callsService.updateAvailability(preferredStatus as 'Online' | 'Offline')
+                    .then(() => callLogger.info(`Updated availability to ${preferredStatus}`))
+                    .catch(async (err) => {
+                        callLogger.warning('Failed to auto-set availability', err);
 
-                        try {
-                            // 1. Try leaving queue
-                            await callsService.leaveCallQueue().catch(() => { });
+                        const errMsg = JSON.stringify(err);
+                        if (errMsg.toLowerCase().includes('active or pending call')) {
+                            callLogger.warning('⚠️ User seems to be stuck in a call. Attempting emergency cleanup...');
 
-                            // 2. Fetch active calls (incoming/outgoing) and end them
-                            // We fetch recent ones and check status if possible, or just try to end matches
-                            // Since we don't have a dedicated "get active call" endpoint, we try lists
-                            const [incoming, outgoing] = await Promise.all([
-                                callsService.getMyIncomingCalls({ status: 'initiated' }).catch(() => ({ data: [] })),
-                                callsService.getMyOutgoingCalls({ status: 'initiated' }).catch(() => ({ data: [] }))
-                            ]);
+                            try {
+                                // 1. Try leaving queue
+                                await callsService.leaveCallQueue().catch(() => { });
 
-                            const allCalls = [
-                                ...(incoming as any)?.data || [],
-                                ...(outgoing as any)?.data || []
-                            ];
+                                // 2. Fetch active calls (incoming/outgoing) and end them
+                                const [incoming, outgoing] = await Promise.all([
+                                    callsService.getMyIncomingCalls({ status: 'initiated' }).catch(() => ({ data: [] })),
+                                    callsService.getMyOutgoingCalls({ status: 'initiated' }).catch(() => ({ data: [] }))
+                                ]);
 
-                            // Also try "in-progress" or similar statuses if the API supports it
-                            // For now, let's just log what we found
-                            callLogger.info('Found potential stuck calls:', allCalls);
+                                const allCalls = [
+                                    ...(incoming as any)?.data || [],
+                                    ...(outgoing as any)?.data || []
+                                ];
 
-                            for (const call of allCalls) {
-                                if (call.id || call.callId) {
-                                    callLogger.info('Force ending stuck call:', call.id || call.callId);
-                                    await callsService.end(call.id || call.callId, 'Stuck state cleanup').catch(() => { });
+                                callLogger.info('Found potential stuck calls:', allCalls);
+
+                                for (const call of allCalls) {
+                                    if (call.id || call.callId) {
+                                        callLogger.info('Force ending stuck call:', call.id || call.callId);
+                                        await callsService.end(call.id || call.callId, 'Stuck state cleanup').catch(() => { });
+                                    }
                                 }
+
+                                // 3. Try setting availability again
+                                setTimeout(() => {
+                                    const retryStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
+                                    callsService.updateAvailability(retryStatus as 'Online' | 'Offline').catch(() => { });
+                                }, 1000);
+
+                            } catch (cleanupErr) {
+                                callLogger.error('Failed partial cleanup', cleanupErr);
                             }
-
-                            // 3. Try setting availability again
-                            setTimeout(() => {
-                                const retryStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
-                                callsService.updateAvailability(retryStatus as 'Online' | 'Offline').catch(() => { });
-                            }, 1000);
-
-                        } catch (cleanupErr) {
-                            callLogger.error('Failed partial cleanup', cleanupErr);
                         }
-                    }
-                });
+                    });
+            } else {
+                callLogger.info('Skipping initial availability check due to active call');
+            }
 
             return () => {
                 callLogger.info('Disconnecting SignalR on unmount');
