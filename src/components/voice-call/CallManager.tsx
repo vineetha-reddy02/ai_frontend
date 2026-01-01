@@ -224,28 +224,36 @@ const CallManager: React.FC = () => {
         }
     }, [isMuted]);
 
-    // 4. Heartbeat for Busy Status (Prevent server-side timeout)
+    // 4. Heartbeat for Offline Status (Prevent server-side timeout)
     useEffect(() => {
         let heartbeatInterval: NodeJS.Timeout | null = null;
+        let storageInterval: NodeJS.Timeout | null = null;
 
         if (callState !== 'idle') {
             callLogger.info('Starting Offline heartbeat');
             // Initial pulse
             callsService.updateAvailability('Offline').catch(() => { });
+            localStorage.setItem('voice_call_active_heartbeat', Date.now().toString());
 
-            // Pulse every 30 seconds
+            // Pulse API every 30 seconds
             heartbeatInterval = setInterval(() => {
                 callLogger.debug('Sending Offline heartbeat');
                 callsService.updateAvailability('Offline').catch(err =>
                     callLogger.warning('Failed to send Offline heartbeat', err)
                 );
             }, 30000);
+
+            // Pulse localStorage every 2 seconds to keep other tabs informing efficiently
+            storageInterval = setInterval(() => {
+                localStorage.setItem('voice_call_active_heartbeat', Date.now().toString());
+            }, 2000);
         }
 
         return () => {
-            if (heartbeatInterval) {
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            if (storageInterval) clearInterval(storageInterval);
+            if (callState !== 'idle') {
                 callLogger.info('Stopping Offline heartbeat');
-                clearInterval(heartbeatInterval);
             }
         };
     }, [callState]);

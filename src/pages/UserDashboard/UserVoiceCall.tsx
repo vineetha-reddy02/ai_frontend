@@ -192,12 +192,17 @@ const UserVoiceCall: React.FC = () => {
                 fetchAvailableUsers({ silent: true });
                 if (pollCount % 6 === 0) {
                     // Heartbeat to keep availability fresh (every 30 seconds)
-                    // Only pulse if user intends to be online AND is NOT in a call
                     const pref = localStorage.getItem('user_availability_preference');
                     if (pref !== 'offline' && callState === 'idle') {
-                        callsService.updateAvailability('Online').catch(() => {
-                            // Ignore errors
-                        });
+                        // Check if another tab is in an active call
+                        const lastHeartbeat = parseInt(localStorage.getItem('voice_call_active_heartbeat') || '0');
+                        const isOtherTabActive = (Date.now() - lastHeartbeat) < 10000; // 10s buffer
+
+                        if (!isOtherTabActive) {
+                            callsService.updateAvailability('Online').catch(() => {
+                                // Ignore errors
+                            });
+                        }
                     }
                 }
             }, 5000);
@@ -205,7 +210,7 @@ const UserVoiceCall: React.FC = () => {
         } else {
             fetchHistory();
         }
-    }, [activeTab]);
+    }, [activeTab, callState]);
 
     const handleInitiateCall = async (userId: string) => {
         if (!hasActiveSubscription && !isTrialActive) {
