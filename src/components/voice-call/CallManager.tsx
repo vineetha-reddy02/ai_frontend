@@ -225,7 +225,33 @@ const CallManager: React.FC = () => {
         }
     }, [isMuted]);
 
-    // 4. Join Agora Channel
+    // 4. Heartbeat for Busy Status (Prevent server-side timeout)
+    useEffect(() => {
+        let heartbeatInterval: NodeJS.Timeout | null = null;
+
+        if (callState !== 'idle') {
+            callLogger.info('Starting Busy heartbeat');
+            // Initial pulse
+            callsService.updateAvailability('Busy').catch(() => { });
+
+            // Pulse every 30 seconds
+            heartbeatInterval = setInterval(() => {
+                callLogger.debug('Sending Busy heartbeat');
+                callsService.updateAvailability('Busy').catch(err =>
+                    callLogger.warning('Failed to send Busy heartbeat', err)
+                );
+            }, 30000);
+        }
+
+        return () => {
+            if (heartbeatInterval) {
+                callLogger.info('Stopping Busy heartbeat');
+                clearInterval(heartbeatInterval);
+            }
+        };
+    }, [callState]);
+
+    // 5. Join Agora Channel
     useEffect(() => {
         const joinChannelWrapper = async () => {
             if (!currentCall || !user) return;
