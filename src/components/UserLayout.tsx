@@ -119,13 +119,15 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                                     </span>
                                 </div>
                             ) : (
-                                <TrialTimer
-                                    trialExpiresAt={trialExpiresAt}
-                                    hasActiveSubscription={hasActiveSubscription}
-                                    isFreeTrial={isFreeTrial}
-                                    onUpgrade={triggerUpgradeModal}
-                                    planName={user?.subscriptionPlan}
-                                />
+                                <div className="hidden sm:block">
+                                    <TrialTimer
+                                        trialExpiresAt={trialExpiresAt}
+                                        hasActiveSubscription={hasActiveSubscription}
+                                        isFreeTrial={isFreeTrial}
+                                        onUpgrade={triggerUpgradeModal}
+                                        planName={user?.subscriptionPlan}
+                                    />
+                                </div>
                             )}
 
 
@@ -198,7 +200,20 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
             </div>
 
             {/* Main Content */}
+            {/* Main Content */}
             <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12 mt-4 animate-fadeIn user-select-none">
+                {/* Mobile-only Trial Timer */}
+                {!isExplicitlyCancelled && !hasActiveSubscription && (
+                    <div className="block sm:hidden mb-6">
+                        <TrialTimer
+                            trialExpiresAt={trialExpiresAt}
+                            hasActiveSubscription={hasActiveSubscription}
+                            isFreeTrial={isFreeTrial}
+                            onUpgrade={triggerUpgradeModal}
+                            planName={user?.subscriptionPlan}
+                        />
+                    </div>
+                )}
                 {children}
             </main>
 

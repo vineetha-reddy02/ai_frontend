@@ -114,11 +114,11 @@ const TrialTimer: React.FC<TrialTimerProps> = ({
     }
 
     return (
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-opacity-10 dark:bg-opacity-20 ${isExpired
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-opacity-10 dark:bg-opacity-20 whitespace-nowrap flex-shrink-0 ${isExpired
             ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
             : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
             }`}>
-            <Clock className="w-4 h-4 text-red-600 dark:text-red-400" />
+            <Clock className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
             <div className="flex flex-col">
                 <span className="text-xs font-medium text-red-900 dark:text-red-200">
                     {isExpired ? 'Trial Expired' : `${planName || 'Free Trial'}: Expires ${new Date(trialExpiresAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`}
