@@ -52,8 +52,8 @@ export const authService = {
     return apiService.post(API_ENDPOINTS.REFRESH_TOKEN, { refreshToken });
   },
 
-  verifyEmail: async (email: string, code: string): Promise<any> => {
-    return apiService.get('/auth/verify-email', { params: { email, code } });
+  verifyEmail: async (email: string, token: string): Promise<any> => {
+    return apiService.get('/auth/confirm-email', { params: { email, token } });
   },
 
   resendOtp: async (email: string): Promise<any> => {
