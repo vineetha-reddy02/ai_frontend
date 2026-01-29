@@ -6,7 +6,8 @@ import {
     Shield,
     Check,
     Edit2,
-    Loader2
+    Loader2,
+    Trash2
 } from 'lucide-react';
 import SuperAdminLayout from '../../components/SuperAdminLayout';
 import Button from '../../components/Button';
@@ -169,6 +170,25 @@ const AdminManagementPage: React.FC = () => {
         setSelectedPermissions(newSet);
     };
 
+    const handleDelete = async (admin: any) => {
+        if (!confirm(`Are you sure you want to delete ${admin.fullName}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await adminService.deleteUser(admin.id);
+            alert(`${admin.fullName} has been deleted successfully.`);
+            loadData(); // Refresh the list
+        } catch (err: any) {
+            console.error('Error deleting admin:', err);
+            const errorMsg = err.response?.data?.message || err.message || 'Failed to delete admin';
+            alert(`Error: ${errorMsg}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
@@ -205,9 +225,9 @@ const AdminManagementPage: React.FC = () => {
 
                 if (!newUserId) throw new Error('Could not retrieve new User ID');
 
-                console.log('Promoting to Admin (Step 2: Force Update Role)', newUserId);
-                // Explicitly update role to Admin to ensure it persists, as create might default to User
-                await adminService.updateUser(newUserId, { role: 'Admin' });
+                // Step 2: Role is already set by createUser, so we can skip the manual update
+                // console.log('Promoting to Admin (Step 2: Force Update Role)', newUserId);
+                // await adminService.updateUser(newUserId, { role: 'Admin' });
 
                 console.log('Granting Permissions (Step 3: Bulk Grant)', newUserId);
                 const permsToGrant = Array.from(selectedPermissions);
@@ -246,14 +266,22 @@ const AdminManagementPage: React.FC = () => {
             // Extract validation errors
             let msg = 'Failed to save';
             const errorData = err.response?.data || err;
-            const validationErrors = errorData.errors || errorData.messages;
 
-            if (Array.isArray(validationErrors) && validationErrors.length > 0) {
-                // If it's an array of strings
-                msg = validationErrors.join('\n');
-            } else if (typeof validationErrors === 'string') {
-                msg = validationErrors;
-            } else if (err.message) {
+            // Check for simple message first (common for 400 errors like "User already exists")
+            if (errorData.message) {
+                msg = errorData.message;
+            }
+            // Check for validation array errors
+            else if (errorData.errors || errorData.messages) {
+                const validationErrors = errorData.errors || errorData.messages;
+                if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+                    msg = validationErrors.join('\n');
+                } else if (typeof validationErrors === 'string') {
+                    msg = validationErrors;
+                }
+            }
+            // Fallback to axios error message if no response data
+            else if (err.message) {
                 msg = err.message;
             }
 
@@ -322,13 +350,22 @@ const AdminManagementPage: React.FC = () => {
                                             {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : '-'}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => handleOpenEdit(admin)}
-                                                className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:hover:text-indigo-400 transition-colors ml-auto"
-                                            >
-                                                <Edit2 size={16} />
-                                                Manage Permissions
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleOpenEdit(admin)}
+                                                    className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:hover:text-indigo-400 transition-colors"
+                                                >
+                                                    <Edit2 size={16} />
+                                                    Manage Permissions
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(admin)}
+                                                    className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-800 dark:hover:text-red-400 transition-colors"
+                                                    title="Delete Admin"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
