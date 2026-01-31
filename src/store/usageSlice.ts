@@ -78,6 +78,13 @@ export const usageSlice = createSlice({
                 localStorage.setItem('usageData', JSON.stringify(state));
             }
         },
+
+        // Force set usage (for syncing with backend)
+        setUsage: (state, action: PayloadAction<number>) => {
+            state.voiceCallUsedSeconds = action.payload;
+            state.lastResetDate = getTodayDateString(); // Update date to prevent double reset
+            localStorage.setItem('usageData', JSON.stringify(state));
+        },
     },
 });
 
@@ -87,6 +94,7 @@ export const {
     resetVoiceCallSession,
     resetDailyUsage,
     checkAndReset,
+    setUsage,
 } = usageSlice.actions;
 
 export default usageSlice.reducer;

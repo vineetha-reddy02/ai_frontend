@@ -161,6 +161,9 @@ export const adminService = {
   createAdmin: async (data: any) =>
     apiService.post('/admin/create-admin', data),
 
+  resendVerificationEmail: async (userId: string) =>
+    apiService.post(`/users/${userId}/resend-verification`, { userId }),
+
   resolveTicket: async (ticketId: string, resolution: string) =>
     apiService.post(`/admin/support/tickets/${ticketId}/resolve`, { resolution }),
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, User, Clock, History, RefreshCw, ArrowLeft, ChevronDown, Sparkles } from 'lucide-react';
+import { Phone, User, Clock, History, RefreshCw, ArrowLeft, ChevronDown, Sparkles, Crown, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import callsService from '../../services/calls';
 import Button from '../../components/Button';
@@ -33,7 +33,6 @@ const UserVoiceCall: React.FC = () => {
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
     const [findingPartner, setFindingPartner] = useState(false);
     const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-    const [showVoiceCallLimitModal, setShowVoiceCallLimitModal] = useState(false);
 
     const {
         hasActiveSubscription,
@@ -50,7 +49,7 @@ const UserVoiceCall: React.FC = () => {
 
         if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) {
             callLogger.warning('Call blocked: No remaining call time');
-            setShowVoiceCallLimitModal(true);
+            triggerUpgradeModal('voice-call');
             return;
         }
 
@@ -219,7 +218,7 @@ const UserVoiceCall: React.FC = () => {
             return;
         }
         if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) {
-            setShowVoiceCallLimitModal(true);
+            triggerUpgradeModal('voice-call');
             return;
         }
         const targetUser = availableUsers.find(u => (u.userId || u.id) === userId);
@@ -313,27 +312,54 @@ const UserVoiceCall: React.FC = () => {
                                     {t('voiceCall.randomCallDesc')}
                                 </p>
 
-                                <button
-                                    onClick={() => {
-                                        if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) setShowVoiceCallLimitModal(true);
-                                        else if (!hasActiveSubscription && !isTrialActive) triggerUpgradeModal();
-                                        else setShowPrivacyModal(true);
-                                    }}
-                                    disabled={findingPartner || loading || availableUsers.length === 0}
-                                    className={`relative group px-8 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden`}
-                                >
-                                    <span className="relative z-10 flex items-center gap-3">
-                                        {findingPartner ? <RefreshCw className="animate-spin" /> : <Sparkles className="animate-pulse" />}
-                                        {findingPartner ? t('voiceCall.finding') : t('voiceCall.callRandom')}
-                                    </span>
-                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-2xl" />
-                                </button>
+                                {(!hasVoiceCallTimeRemaining && !hasActiveSubscription) ? (
+                                    <button
+                                        onClick={() => navigate('/subscriptions')}
+                                        className="relative group px-10 py-5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-amber-500/30 hover:shadow-amber-500/50 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                                    >
+                                        <span className="relative z-10 flex items-center gap-3">
+                                            <Crown className="w-6 h-6 animate-bounce" />
+                                            {t('voiceCall.upgradeNow')}
+                                        </span>
+                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            if (voiceCallLimitSeconds !== -1 && !hasVoiceCallTimeRemaining) triggerUpgradeModal('voice-call');
+                                            else if (!hasActiveSubscription && !isTrialActive) triggerUpgradeModal('voice-call');
+                                            else setShowPrivacyModal(true);
+                                        }}
+                                        disabled={findingPartner || loading || availableUsers.length === 0}
+                                        className={`relative group px-8 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden`}
+                                    >
+                                        <span className="relative z-10 flex items-center gap-3">
+                                            {findingPartner ? <RefreshCw className="animate-spin" /> : <Sparkles className="animate-pulse" />}
+                                            {findingPartner ? t('voiceCall.finding') : t('voiceCall.callRandom')}
+                                        </span>
+                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-2xl" />
+                                    </button>
+                                )}
 
-                                {availableUsers.length === 0 && !loading && (
+                                {availableUsers.length === 0 && !loading && hasVoiceCallTimeRemaining && (
                                     <div className="mt-6 flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full">
                                         <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                                         <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
                                             {t('voiceCall.noUsers')}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {!hasVoiceCallTimeRemaining && !hasActiveSubscription && (
+                                    <div className="mt-6 flex flex-col items-center gap-2 animate-fadeIn">
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-full">
+                                            <AlertCircle className="w-4 h-4 text-red-500" />
+                                            <p className="text-sm font-bold text-red-600 dark:text-red-400">
+                                                {t('voiceCall.limitReached')}
+                                            </p>
+                                        </div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                                            {t('voiceCall.limitDesc')}
                                         </p>
                                     </div>
                                 )}
@@ -361,20 +387,33 @@ const UserVoiceCall: React.FC = () => {
                                 <>
                                     <div className="flex justify-between text-sm font-medium mb-2">
                                         <span className="text-slate-500 dark:text-slate-400">{t('voiceCall.used')}</span>
-                                        <span className="text-slate-900 dark:text-white">
+                                        <span className={`font-bold ${!hasVoiceCallTimeRemaining ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
                                             {Math.floor((voiceCallLimitSeconds - voiceCallRemainingSeconds) / 60)}m
                                         </span>
                                     </div>
-                                    <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
                                         <div
-                                            className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-500"
+                                            className={`h-full rounded-full transition-all duration-500 ${!hasVoiceCallTimeRemaining ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-r from-violet-500 to-fuchsia-500'}`}
                                             style={{ width: `${((voiceCallLimitSeconds - voiceCallRemainingSeconds) / voiceCallLimitSeconds) * 100}%` }}
                                         />
                                     </div>
-                                    <div className="flex justify-between text-xs text-slate-400 mt-2">
+                                    <div className="flex justify-between text-xs text-slate-400 mt-2 font-medium">
                                         <span>0m</span>
                                         <span>{Math.floor(voiceCallLimitSeconds / 60)}m {t('voiceCall.limit')}</span>
                                     </div>
+
+                                    {!hasVoiceCallTimeRemaining && !hasActiveSubscription && (
+                                        <button
+                                            onClick={() => navigate('/subscriptions')}
+                                            className="w-full mt-4 p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between hover:from-amber-500/20 hover:to-orange-500/20 transition-all group"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Crown size={16} className="text-amber-500 group-hover:scale-110 transition-transform" />
+                                                <span className="text-sm font-bold text-amber-600 dark:text-amber-400">Upgrade to Pro</span>
+                                            </div>
+                                            <ChevronDown size={14} className="text-amber-500 -rotate-90" />
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -487,24 +526,7 @@ const UserVoiceCall: React.FC = () => {
                 </div>
             )}
 
-            {/* Limit Modal */}
-            {showVoiceCallLimitModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-                    <div className="glass-panel w-full max-w-md p-8 rounded-3xl animate-slideUp text-center">
-                        <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Clock size={40} />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{t('voiceCall.limitReached')}</h3>
-                        <p className="text-slate-500 dark:text-slate-400 mb-8">{t('voiceCall.limitDesc')}</p>
-                        <Button className="w-full py-4 text-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-xl" onClick={() => navigate('/subscriptions')}>
-                            {t('voiceCall.upgradeNow')}
-                        </Button>
-                        <button onClick={() => setShowVoiceCallLimitModal(false)} className="mt-4 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                            {t('voiceCall.cancel')}
-                        </button>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 };

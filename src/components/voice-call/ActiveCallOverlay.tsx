@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { PhoneOff, Mic, MicOff, Clock } from 'lucide-react';
 import { RootState } from '../../store';
@@ -17,7 +17,8 @@ const ActiveCallOverlay: React.FC = () => {
         voiceCallRemainingSeconds,
         hasActiveSubscription,
         isFreeTrial,
-        voiceCallLimitSeconds
+        voiceCallLimitSeconds,
+        triggerUpgradeModal
     } = useUsageLimits();
 
     const [showWarning, setShowWarning] = useState(false);
@@ -31,7 +32,7 @@ const ActiveCallOverlay: React.FC = () => {
     const partnerAvatar = isIncoming ? currentCall?.callerAvatar : currentCall?.calleeAvatar;
 
     // Calculate remaining time for this call session
-    const sessionRemainingSeconds = voiceCallRemainingSeconds - durationSeconds;
+    const sessionRemainingSeconds = voiceCallRemainingSeconds;
     // Free tier user = no active subscription (hasActiveSubscription already checks for paid plans)
     const isFreeTierUser = !hasActiveSubscription;
 
@@ -115,9 +116,18 @@ const ActiveCallOverlay: React.FC = () => {
             // Round up to nearest minute before ending
             dispatch(roundUpToNearestMinute());
 
-            endCall('Free trial time limit reached');
+            // End the call
+            endCall('Your free call time has been used up');
+
+            // Show upgrade modal after a short delay
+            setTimeout(() => {
+                if (triggerUpgradeModal) {
+                    callLogger.info('🔔 Showing upgrade modal - call limit reached');
+                    triggerUpgradeModal();
+                }
+            }, 1500); // 1.5 second delay to allow call to end gracefully
         }
-    }, [sessionRemainingSeconds, isFreeTierUser, currentCall, callState, endCall, dispatch]);
+    }, [sessionRemainingSeconds, isFreeTierUser, currentCall, callState, endCall, dispatch, triggerUpgradeModal]);
 
     if (!shouldShow || !currentCall) return null;
 

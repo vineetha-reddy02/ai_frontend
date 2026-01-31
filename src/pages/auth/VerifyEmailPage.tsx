@@ -15,12 +15,15 @@ const VerifyEmailPage: React.FC = () => {
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('');
     const [countdown, setCountdown] = useState(5);
+    const verificationStarted = React.useRef(false);
 
     const token = paramsToken || searchParams.get('token');
     const email = searchParams.get('email');
 
     useEffect(() => {
         const verify = async () => {
+            if (verificationStarted.current) return;
+
             if (!token || !email) {
                 setStatus('error');
                 setMessage(t('auth.verifyEmail.invalidLink'));
@@ -28,6 +31,7 @@ const VerifyEmailPage: React.FC = () => {
             }
 
             try {
+                verificationStarted.current = true;
                 await authService.verifyEmail(email, token);
                 setStatus('success');
                 setMessage(t('auth.verifyEmail.successMessage'));

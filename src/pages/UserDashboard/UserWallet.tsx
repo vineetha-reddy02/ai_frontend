@@ -65,12 +65,12 @@ const UserWallet: React.FC = () => {
 
             const balanceData = (balanceRes as any)?.data || balanceRes;
             setWalletData({
-                balance: balanceData?.balance || 0,
+                balance: Number(balanceData?.balance || 0),
                 currency: balanceData?.currency || 'INR',
-                frozenAmount: balanceData?.frozenAmount || 0,
-                availableBalance: balanceData?.availableBalance || 0,
-                totalEarnings: balanceData?.totalEarnings || 0,
-                totalSpent: balanceData?.totalSpent || 0,
+                frozenAmount: Number(balanceData?.frozenAmount || 0),
+                availableBalance: Number(balanceData?.availableBalance || 0),
+                totalEarnings: Number(balanceData?.totalEarnings || 0),
+                totalSpent: Number(balanceData?.totalSpent || 0),
                 pendingTransactions: balanceData?.pendingTransactions || []
             });
 
@@ -81,7 +81,7 @@ const UserWallet: React.FC = () => {
             setTransactions(sortedTransactions);
 
             const referralData = (referralStatsRes as any)?.data || referralStatsRes;
-            setReferralEarnings(referralData?.totalEarnings || 0);
+            setReferralEarnings(Number(referralData?.totalEarnings || 0));
         } catch (error) {
             console.error('Failed to load wallet:', error);
             dispatch(showToast({ message: 'Failed to load wallet info', type: 'error' }));

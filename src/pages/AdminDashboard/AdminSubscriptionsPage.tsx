@@ -37,7 +37,7 @@ interface SubscriptionPlan {
     description: string;
     price: number;
     currency: string;
-    billingCycle: 'Monthly' | 'Yearly' | 'Quarterly';
+    billingCycle: 'Monthly' | 'Yearly' | 'Quarterly' | 'Free';
     features: Feature[] | Record<string, string>; // Support both formats
     isActive: boolean;
     displayOrder: number;
@@ -63,7 +63,7 @@ const AdminSubscriptionsPage: React.FC = () => {
         description: '',
         price: 0,
         currency: 'USD',
-        billingCycle: 'Monthly' as 'Monthly' | 'Yearly' | 'Quarterly',
+        billingCycle: 'Monthly' as 'Monthly' | 'Yearly' | 'Quarterly' | 'Free',
         features: {} as Record<string, string>,
         isActive: true,
         displayOrder: 0,
@@ -158,7 +158,7 @@ const AdminSubscriptionsPage: React.FC = () => {
                 await subscriptionsService.updatePlan(editingPlan.id, submitData);
                 dispatch(showToast({ message: 'Plan updated successfully', type: 'success' }));
             } else {
-                await subscriptionsService.createPlan(submitData as any);
+                await subscriptionsService.createPlan(submitData);
                 dispatch(showToast({ message: 'Plan created successfully', type: 'success' }));
             }
 
@@ -572,6 +572,7 @@ const AdminSubscriptionsPage: React.FC = () => {
                                             <option value="Monthly">Monthly</option>
                                             <option value="Yearly">Yearly</option>
                                             <option value="Quarterly">Quarterly</option>
+                                            <option value="Free">Free</option>
                                         </select>
                                     </div>
 

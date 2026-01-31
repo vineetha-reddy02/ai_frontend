@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Users, Loader, AlertCircle, CheckCircle, X, Eye, ArrowLeft, Calendar, Clock, Plus, EyeOff } from 'lucide-react';
+import { Users, Loader, AlertCircle, CheckCircle, X, Eye, ArrowLeft, Calendar, Clock, Plus, EyeOff, Trash2 } from 'lucide-react';
 import { RootState } from '../../store';
 import { adminService } from '../../services/admin';
 import { subscriptionsService } from '../../services/subscriptions';
@@ -53,10 +53,6 @@ const AdminUsersPage: React.FC = () => {
         return <Navigate to="/" replace />;
     }
 
-    useEffect(() => {
-        loadUsers();
-    }, []);
-
     const loadUsers = async () => {
         try {
             setLoading(true);
@@ -87,6 +83,26 @@ const AdminUsersPage: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const handleDeleteUser = async (userId: string) => {
+        if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await adminService.deleteUser(userId);
+            dispatch(showToast({ type: 'success', message: 'User deleted successfully' }));
+            loadUsers(); // Refresh list
+        } catch (err: any) {
+            console.error('Error deleting user:', err);
+            const msg = err.response?.data?.message || err.message || 'Failed to delete user';
+            dispatch(showToast({ type: 'error', message: msg }));
+        }
+    };
+
+    useEffect(() => {
+        loadUsers();
+    }, []);
 
     useEffect(() => {
         let filtered = users;
@@ -132,14 +148,13 @@ const AdminUsersPage: React.FC = () => {
                 return;
             }
 
-            // Call Register API with role='instructor'
-            await authService.register({
+            // Call Admin API to create user with role='Instructor'
+            await adminService.createUser({
                 fullName: createFormData.fullName,
                 email: createFormData.email,
                 password: createFormData.password,
                 phoneNumber: createFormData.phoneNumber,
-                confirmPassword: createFormData.password,
-                role: 'instructor'
+                role: 'Instructor'
             });
 
             dispatch(showToast({ type: 'success', message: 'Instructor created successfully' }));
@@ -272,7 +287,7 @@ const AdminUsersPage: React.FC = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Learners</p>
-                                <p className="text-3xl font-bold text-purple-900 dark:text-purple-100 mt-2">{stats.learners}</p>
+                                <p className="text-3xl font-bold text-purple-900 dark:text-blue-100 mt-2">{stats.learners}</p>
                             </div>
                             <AlertCircle className="w-12 h-12 text-purple-500" />
                         </div>
@@ -369,15 +384,18 @@ const AdminUsersPage: React.FC = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedUser(userData);
-                                                    setShowDetails(true);
-                                                }}
-                                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                            >
-                                                <Eye className="w-5 h-5" />
-                                            </button>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedUser(userData);
+                                                        setShowDetails(true);
+                                                    }}
+                                                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

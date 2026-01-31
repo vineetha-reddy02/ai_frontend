@@ -53,7 +53,7 @@ export const authService = {
   },
 
   verifyEmail: async (email: string, token: string): Promise<any> => {
-    return apiService.get('/auth/confirm-email', { params: { email, token } });
+    return apiService.get(API_ENDPOINTS.VERIFY_EMAIL, { params: { email, token } });
   },
 
   resendOtp: async (email: string): Promise<any> => {

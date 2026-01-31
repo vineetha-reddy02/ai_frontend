@@ -25,6 +25,7 @@ import { Logo } from './common/Logo';
 import callsService from '../services/calls';
 import { useTranslation } from 'react-i18next';
 import BackgroundGraphics from './BackgroundGraphics';
+import UpgradeModal from './UpgradeModal';
 
 interface UserLayoutProps {
     children: React.ReactNode;
@@ -37,6 +38,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     const { user } = useSelector((state: RootState) => state.auth);
     const { theme } = useSelector((state: RootState) => state.ui);
     const { showRatingModal, lastCompletedCall } = useSelector((state: RootState) => state.call);
+    const { modal } = useSelector((state: RootState) => state.ui);
     const { t } = useTranslation();
 
     const [profileOpen, setProfileOpen] = useState(false);
@@ -46,6 +48,8 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         isFreeTrial,
         trialExpiresAt,
         triggerUpgradeModal,
+        closeUpgradeModal,
+        showUpgradeModal,
         isContentLocked,
         isExplicitlyCancelled
     } = useUsageLimits();
@@ -124,7 +128,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                                         trialExpiresAt={trialExpiresAt}
                                         hasActiveSubscription={hasActiveSubscription}
                                         isFreeTrial={isFreeTrial}
-                                        onUpgrade={triggerUpgradeModal}
+                                        onUpgrade={() => triggerUpgradeModal('voice-call')}
                                         planName={user?.subscriptionPlan}
                                     />
                                 </div>
@@ -225,6 +229,13 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                     onClose={() => dispatch(closeRatingModal())}
                 />
             )}
+
+            {/* Global Upgrade Modal */}
+            <UpgradeModal
+                isOpen={showUpgradeModal}
+                onClose={closeUpgradeModal}
+                reason={modal?.data?.reason || 'general'}
+            />
         </div>
     );
 };

@@ -10,7 +10,8 @@ export const API_ENDPOINTS = {
   GET_PROFILE: '/users/profile',
   UPDATE_PROFILE: '/users/profile',
   FORGOT_PASSWORD: '/auth/forgot-password',
-  RESEND_EMAIL_CONFIRMATION: '/auth/resend-email-confirmation',
+  RESEND_EMAIL_CONFIRMATION: '/auth/resend-verification',
+  VERIFY_EMAIL: '/auth/verify-email',
   RESET_PASSWORD: '/auth/reset-password',
 
   // Dashboard

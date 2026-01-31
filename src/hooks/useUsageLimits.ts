@@ -1,15 +1,20 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { RootState } from '../store';
-import { checkAndReset, incrementVoiceCallUsage } from '../store/usageSlice';
+import { checkAndReset, incrementVoiceCallUsage, setUsage } from '../store/usageSlice';
 import { callsService } from '../services/calls';
+import { showModal, hideModal } from '../store/uiSlice';
 
 export const useUsageLimits = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state: RootState) => state.auth);
     const usageData = useSelector((state: RootState) => state.usage);
-    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-    const [backendUsageSynced, setBackendUsageSynced] = useState(false);
+    const { modal } = useSelector((state: RootState) => state.ui);
+    const backendUsageSyncedRef = useRef(false);
+    const [localBackendUsageSynced, setLocalBackendUsageSynced] = useState(false);
+
+    // Check if upgrade modal is visible via Redux
+    const isUpgradeModalOpen = modal?.type === 'upgrade' && modal?.visible;
 
     // Check if user has active subscription (unlimited access)
     // Robust subscription check handling lower case, trialing, and plan existence
@@ -53,7 +58,7 @@ export const useUsageLimits = () => {
     // Sync usage from backend on mount
     useEffect(() => {
         const syncUsageFromBackend = async () => {
-            if (backendUsageSynced || !user?.id) return;
+            if (localBackendUsageSynced || !user?.id) return;
 
             try {
                 console.log('🔄 Starting backend usage sync...');
@@ -68,47 +73,44 @@ export const useUsageLimits = () => {
                 const today = new Date().toISOString().split('T')[0];
                 console.log(`📅 Today's date: ${today}`);
 
-                // Calculate total seconds used today from completed calls
-                const todaysCalls = history.filter((call: any) => {
-                    const callDate = new Date(call.initiatedAt || call.startTime).toISOString().split('T')[0];
-                    const isToday = callDate === today;
-                    const isCompleted = call.status === 'Completed';
+                // Calculate total seconds used from ALL completed calls (Lifetime limit for free trial)
+                const completedCalls = history.filter((call: any) => {
+                    const status = (call.status || '').toLowerCase();
+                    const isCompleted = status === 'completed';
 
-                    console.log(`Call ${call.callId || call.id}: Date=${callDate}, Status=${call.status}, IsToday=${isToday}, IsCompleted=${isCompleted}, Duration=${call.durationSeconds || call.duration || 0}s`);
+                    // Log ignored calls for debugging
+                    if (!isCompleted) {
+                        console.log(`Skipping call ${call.callId || call.id}: Status=${status} (not completed)`);
+                    }
 
-                    return isToday && isCompleted;
+                    return isCompleted;
                 });
 
-                console.log(`✅ Found ${todaysCalls.length} completed calls from today`);
+                console.log(`✅ Found ${completedCalls.length} completed calls (lifetime history)`);
 
-                const totalUsedSeconds = todaysCalls.reduce((total: number, call: any) => {
+                const totalUsedSeconds = completedCalls.reduce((total: number, call: any) => {
                     const duration = call.durationSeconds !== undefined ? call.durationSeconds : call.duration || 0;
                     return total + duration;
                 }, 0);
 
-                console.log(`📊 Total usage calculated: ${totalUsedSeconds} seconds (${Math.floor(totalUsedSeconds / 60)}:${String(totalUsedSeconds % 60).padStart(2, '0')})`);
+                console.log(`📊 Total lifetime usage calculated: ${totalUsedSeconds} seconds (${Math.floor(totalUsedSeconds / 60)}:${String(totalUsedSeconds % 60).padStart(2, '0')})`);
 
                 // Update Redux with backend data (this will override localStorage)
-                if (totalUsedSeconds > 0) {
-                    console.log('💾 Updating Redux with backend usage...');
-                    // Reset first, then set to backend value
-                    dispatch(checkAndReset());
-                    dispatch(incrementVoiceCallUsage(totalUsedSeconds));
-                    console.log('✅ Redux updated successfully');
-                } else {
-                    console.log('ℹ️ No usage to sync (0 seconds used today)');
-                }
+                // Always sync, even if 0, to ensure correct state if user clears history
+                console.log(`💾 Updating Redux with backend usage: ${totalUsedSeconds}s`);
+                dispatch(setUsage(totalUsedSeconds));
+                console.log('✅ Redux updated successfully');
 
-                setBackendUsageSynced(true);
+                setLocalBackendUsageSynced(true);
             } catch (error) {
                 console.error('❌ Failed to sync usage from backend:', error);
                 // Fall back to localStorage data
-                setBackendUsageSynced(true);
+                setLocalBackendUsageSynced(true);
             }
         };
 
         syncUsageFromBackend();
-    }, [user?.id, backendUsageSynced, dispatch]);
+    }, [user?.id, localBackendUsageSynced, dispatch]);
 
     // Check and reset usage on mount and periodically
     useEffect(() => {
@@ -170,13 +172,13 @@ export const useUsageLimits = () => {
 
     const hasVoiceCallTimeRemaining = voiceCallRemainingSeconds > 0;
 
-    // Trigger upgrade modal
-    const triggerUpgradeModal = () => {
-        setShowUpgradeModal(true);
+    // Trigger upgrade modal via Redux
+    const triggerUpgradeModal = (reason: string = 'general') => {
+        dispatch(showModal({ type: 'upgrade', data: { reason } }));
     };
 
     const closeUpgradeModal = () => {
-        setShowUpgradeModal(false);
+        dispatch(hideModal());
     };
 
     // Combined "Locked" state for UI
@@ -203,7 +205,7 @@ export const useUsageLimits = () => {
         voiceCallLimitSeconds: voiceCallLimitSeconds,
 
         // Upgrade modal
-        showUpgradeModal,
+        showUpgradeModal: isUpgradeModalOpen,
         triggerUpgradeModal,
         closeUpgradeModal,
     };

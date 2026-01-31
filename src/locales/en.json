@@ -506,6 +506,7 @@
     "loginSuccess": "Login successful! Welcome back.",
     "loginFailed": "Login failed - incomplete response",
     "registrationSuccess": "Registration successful! Please Confirm your email before login.",
+    "resendSuccess": "If this email is registered, a confirmation email has been sent.",
     "passwordRequirements": "Password must contain:",
     "reqLength": "At least 8 characters",
     "reqUppercase": "At least 1 uppercase letter",

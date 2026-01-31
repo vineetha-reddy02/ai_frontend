@@ -48,6 +48,7 @@ import UserQuizTakingPage from './pages/UserDashboard/UserQuizTakingPage';
 
 import WalletPage from './pages/UserDashboard/WalletPage';
 import SubscriptionsPage from './pages/UserDashboard/SubscriptionsPage';
+
 import ReferralsPage from './pages/UserDashboard/ReferralsPage';
 // Instructor pages
 import InstructorDashboardPage from './pages/InstructorDashboard/InstructorDashboardPage';
@@ -68,7 +69,7 @@ import { RootState } from './store';
 import { setTheme } from './store/uiSlice';
 import CallManager from './components/voice-call/CallManager';
 import { LanguagePopup } from './components/common/LanguagePopup';
-import { usePaymentVerification } from './hooks/usePaymentVerification';
+
 import { useTokenRefresh } from './hooks/useTokenRefresh';
 
 /**
@@ -164,8 +165,7 @@ function App() {
   const { theme } = useSelector((state: RootState) => state.ui);
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-  // Global payment verification - checks localStorage on every page load
-  usePaymentVerification();
+
 
   // Automatic token refresh - refreshes token before expiration
   useTokenRefresh();
@@ -226,6 +226,7 @@ function App() {
               // Ensure subscription fields are preserved/merged if they exist in profile
               subscriptionStatus: profileData.subscriptionStatus || profileData.subscription?.status || user.subscriptionStatus,
               subscriptionPlan: profileData.subscriptionPlan || profileData.subscription?.planName || profileData.subscription?.plan?.name || user.subscriptionPlan,
+              trialEndDate: profileData.trialEndDate || profileData.subscription?.endDate || user.trialEndDate,
             }));
           }
 
@@ -662,6 +663,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/referrals"
           element={
@@ -699,7 +701,15 @@ function App() {
 
       {/* Voice Call Manager - Global */}
       {/* Only for authenticated users who are NOT superadmins */}
-      {isAuthenticated && user && (user.role as string) !== 'superadmin' && <CallManager />}
+      {(() => {
+        if (isAuthenticated && user) {
+          console.log('✅ App.tsx - CallManager SHOULD render');
+          return <CallManager />;
+        } else {
+          console.log('❌ App.tsx - CallManager WON\'T render:', { isAuthenticated, hasUser: !!user });
+          return null;
+        }
+      })()}
 
       {/* Toast Notifications */}
       <LanguagePopup />

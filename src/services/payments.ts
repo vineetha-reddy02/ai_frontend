@@ -75,12 +75,7 @@ export const paymentsService = {
   adminAdjustWallet: async (data: { userId: string; amount: number; reason?: string }) =>
     apiService.post('/admin/payments/wallets/adjust-balance', data),
 
-  // PhonePe Integration
-  initiatePhonePePayment: async (data: { amount: number; orderId: string; redirectUrl: string }) =>
-    apiService.post('/payments/phonepe/initiate', data),
 
-  handlePhonePeRedirect: async (transactionId: string) =>
-    apiService.post('/payments/phonepe/redirect', { transactionId }),
 
   // Subscription Payments
   purchaseSubscription: async (planId: string, paymentMethod: string) =>

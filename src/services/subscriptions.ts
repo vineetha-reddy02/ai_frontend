@@ -95,7 +95,7 @@ export const subscriptionsService = {
     description: string;
     price: number;
     currency: string;
-    billingCycle: 'Monthly' | 'Yearly' | 'Quarterly';
+    billingCycle: 'Monthly' | 'Yearly' | 'Quarterly' | 'Free';
     features?: Record<string, string>;
     isActive?: boolean;
     displayOrder?: number;
@@ -111,7 +111,7 @@ export const subscriptionsService = {
     description?: string;
     price?: number;
     currency?: string;
-    billingCycle?: 'Monthly' | 'Yearly' | 'Quarterly';
+    billingCycle?: 'Monthly' | 'Yearly' | 'Quarterly' | 'Free';
     features?: Record<string, string>;
     isMostPopular?: boolean;
     isActive?: boolean;

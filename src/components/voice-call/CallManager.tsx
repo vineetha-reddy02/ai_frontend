@@ -18,23 +18,58 @@ import { callLogger } from '../../utils/callLogger';
  * Convert GUID string to numeric UID for Agora
  * Backend expects integer UID, so we hash the GUID to a number
  */
-const guidToNumericUid = (guid: string): number => {
+const guidToNumericUid = (guid: string | number): number => {
+    if (typeof guid === 'number') return guid >>> 0;
+    if (!guid) return 0;
     // Remove hyphens and take first 8 characters
-    const hex = guid.replace(/-/g, '').substring(0, 8);
+    const hex = String(guid).replace(/-/g, '').substring(0, 8);
     // Convert to integer (max 32-bit unsigned int)
     return parseInt(hex, 16) >>> 0;
 };
 
 const CallManager: React.FC = () => {
-    const dispatch = useDispatch();
-    const { user, token } = useSelector((state: RootState) => state.auth);
-    const { callState, currentCall, isMuted } = useSelector((state: RootState) => state.call);
+    console.log('🚀 CallManager FUNCTION CALLED');
+
+    let dispatch: any, user: any, token: any, callState: any, currentCall: any, isMuted: any;
+
+    try {
+        dispatch = useDispatch();
+        user = useSelector((state: RootState) => state.auth.user);
+        token = useSelector((state: RootState) => state.auth.token);
+        const callData = useSelector((state: RootState) => state.call);
+        callState = callData.callState;
+        currentCall = callData.currentCall;
+        isMuted = callData.isMuted;
+
+        console.log('✅ CallManager: Redux state extracted successfully', {
+            hasUser: !!user,
+            hasToken: !!token,
+            callState
+        });
+    } catch (error) {
+        console.error('❌ CallManager: FAILED to extract Redux state!', error);
+        return null;
+    }
 
     // Refs for Agora
     const incomingAudioRef = useRef<HTMLAudioElement | null>(null);
     const isJoiningChannel = useRef<boolean>(false);
     const hasJoinedChannel = useRef<boolean>(false);
     const callStateRef = useRef(callState);
+
+    // DEBUG: Log component mount
+    useEffect(() => {
+        console.log('🎬 CallManager MOUNTED');
+        console.log('👤 Current User Context:', {
+            id: user?.id,
+            name: user?.fullName,
+            role: user?.role,
+            hasToken: !!token
+        });
+        return () => {
+            console.log('🎬 CallManager UNMOUNTED');
+        };
+    }, []);
 
     // Update ref when state changes
     useEffect(() => {
@@ -63,102 +98,60 @@ const CallManager: React.FC = () => {
 
     // 1. Initialize SignalR on Auth Load
     useEffect(() => {
-        if (token && user) {
-            callLogger.info('Initializing SignalR for authenticated user', {
-                userId: user.id,
-                userName: user.fullName
+        if (!token || !user) {
+            console.warn('⚠️ CallManager: Skipping SignalR init (Missing token/user)');
+            return;
+        }
+
+        console.log('🔌 CallManager: Initiating SignalR connection...');
+        signalRService.setToken(token);
+
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000' : 'https://edutalks-backend.lemonfield-c795bfef.centralindia.azurecontainerapps.io');
+        const rootUrl = apiUrl.replace(/\/api.*$/, '');
+        const HUB_URL = `${rootUrl}/hubs/call-signaling`;
+
+        console.log('🔌 CallManager: Target HUB URL:', HUB_URL);
+
+        signalRService.connect(HUB_URL)
+            .then(() => {
+                console.log('✅ CallManager: SignalR connected!');
+
+                // Initial availability check
+                const preferredStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
+
+                if (callStateRef.current === 'idle') {
+                    callsService.updateAvailability(preferredStatus as 'Online' | 'Offline')
+                        .then(() => console.log(`📡 Availability set to ${preferredStatus}`))
+                        .catch(async (err) => {
+                            const errMsg = JSON.stringify(err);
+                            if (errMsg.toLowerCase().includes('active or pending call')) {
+                                console.warn('⚠️ Stuck call detected. Running cleanup...');
+                                try {
+                                    await callsService.leaveCallQueue().catch(() => { });
+                                    const [incoming, outgoing] = await Promise.all([
+                                        callsService.getMyIncomingCalls({ status: 'initiated' }).catch(() => ({ data: [] })),
+                                        callsService.getMyOutgoingCalls({ status: 'initiated' }).catch(() => ({ data: [] }))
+                                    ]);
+                                    const allCalls = [...((incoming as any)?.data || []), ...((outgoing as any)?.data || [])];
+                                    for (const call of allCalls) {
+                                        await callsService.end(call.id || call.callId, 'Cleanup').catch(() => { });
+                                    }
+                                    await callsService.updateAvailability(preferredStatus as 'Online' | 'Offline').catch(() => { });
+                                } catch (e) {
+                                    console.error('❌ Cleanup failed', e);
+                                }
+                            }
+                        });
+                }
+            })
+            .catch((error) => {
+                console.error('❌ CallManager: SignalR connection FAILED', error);
             });
 
-            signalRService.setToken(token);
-
-            const apiUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000' : 'https://edutalks-backend.lemonfield-c795bfef.centralindia.azurecontainerapps.io');
-            // Remove /api/* suffix if present to get root to append hub path
-            const rootUrl = apiUrl.replace(/\/api.*$/, '');
-            const HUB_URL = `${rootUrl}/hubs/call-signaling`;
-
-            callLogger.info('Connecting to SignalR hub', { hubUrl: HUB_URL });
-
-            signalRService.connect(HUB_URL)
-                .then(() => {
-                    callLogger.info('✅ SignalR connection established successfully');
-                    // Automatically set availability to Online (or preferred status)
-                    // Add small delay to ensure connection is fully stabilized
-                    setTimeout(() => {
-                        // Only set availability if we are NOT in a call
-                        if (callStateRef.current === 'idle') {
-                            const preferredStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
-                            callsService.updateAvailability(preferredStatus as 'Online' | 'Offline')
-                                .then(() => callLogger.info(`Updated availability to ${preferredStatus}`))
-                                .catch(err => callLogger.warning('Failed to auto-set availability', err));
-                        } else {
-                            callLogger.info('Setting availability to Offline due to active call');
-                            callsService.updateAvailability('Offline').catch(err => callLogger.warning('Failed to set offline status', err));
-                        }
-                    }, 250);
-                })
-                .catch(async (error) => {
-                    callLogger.error('❌ SignalR connection failed', error);
-                });
-
-            // Try to set availability, and if it fails due to "active call", try to clean up
-            const preferredStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
-
-            // Only attempt if idle
-            if (callStateRef.current === 'idle') {
-                callsService.updateAvailability(preferredStatus as 'Online' | 'Offline')
-                    .then(() => callLogger.info(`Updated availability to ${preferredStatus}`))
-                    .catch(async (err) => {
-                        callLogger.warning('Failed to auto-set availability', err);
-
-                        const errMsg = JSON.stringify(err);
-                        if (errMsg.toLowerCase().includes('active or pending call')) {
-                            callLogger.warning('⚠️ User seems to be stuck in a call. Attempting emergency cleanup...');
-
-                            try {
-                                // 1. Try leaving queue
-                                await callsService.leaveCallQueue().catch(() => { });
-
-                                // 2. Fetch active calls (incoming/outgoing) and end them
-                                const [incoming, outgoing] = await Promise.all([
-                                    callsService.getMyIncomingCalls({ status: 'initiated' }).catch(() => ({ data: [] })),
-                                    callsService.getMyOutgoingCalls({ status: 'initiated' }).catch(() => ({ data: [] }))
-                                ]);
-
-                                const allCalls = [
-                                    ...(incoming as any)?.data || [],
-                                    ...(outgoing as any)?.data || []
-                                ];
-
-                                callLogger.info('Found potential stuck calls:', allCalls);
-
-                                for (const call of allCalls) {
-                                    if (call.id || call.callId) {
-                                        callLogger.info('Force ending stuck call:', call.id || call.callId);
-                                        await callsService.end(call.id || call.callId, 'Stuck state cleanup').catch(() => { });
-                                    }
-                                }
-
-                                // 3. Try setting availability again
-                                setTimeout(() => {
-                                    const retryStatus = localStorage.getItem('user_availability_preference') === 'offline' ? 'Offline' : 'Online';
-                                    callsService.updateAvailability(retryStatus as 'Online' | 'Offline').catch(() => { });
-                                }, 1000);
-
-                            } catch (cleanupErr) {
-                                callLogger.error('Failed partial cleanup', cleanupErr);
-                            }
-                        }
-                    });
-            } else {
-                callLogger.info('Setting availability to Offline due to active call');
-                callsService.updateAvailability('Offline').catch(err => callLogger.warning('Failed to set offline status', err));
-            }
-
-            return () => {
-                callLogger.info('Disconnecting SignalR on unmount');
-                signalRService.disconnect();
-            };
-        }
+        return () => {
+            console.log('🎬 CallManager: Cleaning up connection');
+            signalRService.disconnect();
+        };
     }, [token, user?.id]);
 
     // Auto-cleanup stuck states on mount

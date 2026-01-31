@@ -13,8 +13,22 @@ const IncomingCallModal: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // DEBUG: Log component mount
+    useEffect(() => {
+        console.log('🎬 IncomingCallModal MOUNTED');
+        return () => {
+            console.log('🎬 IncomingCallModal UNMOUNTED');
+        };
+    }, []);
+
+    // DEBUG: Log incomingInvitation changes
+    useEffect(() => {
+        console.log('🔔 IncomingCallModal - incomingInvitation changed:', incomingInvitation);
+    }, [incomingInvitation]);
+
     useEffect(() => {
         if (incomingInvitation) {
+            console.log('📲 IncomingCallModal WILL DISPLAY');
             callLogger.info('📲 IncomingCallModal displayed', {
                 callId: incomingInvitation.callId,
                 callerName: incomingInvitation.callerName,
@@ -79,7 +93,12 @@ const IncomingCallModal: React.FC = () => {
         };
     }, [incomingInvitation?.callId]);
 
-    if (!incomingInvitation) return null;
+    if (!incomingInvitation) {
+        console.log('⚪ IncomingCallModal - NO invitation, returning null');
+        return null;
+    }
+
+    console.log('🟢 IncomingCallModal - RENDERING with invitation:', incomingInvitation);
 
     const handleAccept = async () => {
         if (isProcessing) return;

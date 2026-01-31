@@ -21,6 +21,7 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Memoize schema to prevent recreation on every render, but allow it to update when language changes
@@ -221,8 +222,9 @@ const LoginPage: React.FC = () => {
 
       const notConfirmedIndicator =
         lower.includes('confirm') ||
-        responseErrors.some((e: string) => /confirm/i.test(e)) ||
-        responseMessages.some((m: string) => /confirm/i.test(m));
+        lower.includes('verify') ||
+        responseErrors.some((e: string) => /confirm|verify/i.test(e)) ||
+        responseMessages.some((m: string) => /confirm|verify/i.test(m));
 
       if (notConfirmedIndicator) {
         setShowResend(true);
@@ -232,6 +234,30 @@ const LoginPage: React.FC = () => {
       dispatch(showToast({ message: errorMessage, type: 'error' }));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!watchedEmail) {
+      dispatch(showToast({ message: t('auth.validation.emailInvalid'), type: 'error' }));
+      return;
+    }
+
+    try {
+      setIsResending(true);
+      await authService.resendEmailConfirmation(watchedEmail);
+      dispatch(
+        showToast({
+          message: t('auth.resendSuccess') || 'If this email is registered, a confirmation email has been sent.',
+          type: 'success',
+        })
+      );
+      setShowResend(false);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || 'Failed to resend confirmation';
+      dispatch(showToast({ message: errorMessage, type: 'error' }));
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -299,12 +325,14 @@ const LoginPage: React.FC = () => {
                   </Link>
 
                   {showResend && (
-                    <Link
-                      to={`/resend-confirmation?email=${encodeURIComponent(watchedEmail)}`}
-                      className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                    <button
+                      type="button"
+                      disabled={isResending}
+                      onClick={handleResendConfirmation}
+                      className="text-sm text-primary-600 dark:text-primary-400 hover:underline disabled:opacity-50"
                     >
-                      {t('auth.resendConfirmation')}
-                    </Link>
+                      {isResending ? t('common.loading') : t('auth.resendConfirmation')}
+                    </button>
                   )}
                 </div>
               </div>

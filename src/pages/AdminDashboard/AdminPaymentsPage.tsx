@@ -155,12 +155,20 @@ const AdminPaymentsPage: React.FC = () => {
 
     // Apply status filter
     if (statusFilter) {
-      filtered = filtered.filter(t => t.status === statusFilter);
+      filtered = filtered.filter(t => (t.status || '').toLowerCase() === statusFilter.toLowerCase());
     }
 
     // Apply type filter
     if (typeFilter) {
-      filtered = filtered.filter(t => t.type === typeFilter);
+      // Handle special case for "Referral Reward" which might be "referral_reward" or "ReferralReward"
+      if (typeFilter === 'ReferralReward') {
+        filtered = filtered.filter(t =>
+          (t.type || '').toLowerCase() === 'referralreward' ||
+          (t.type || '').toLowerCase() === 'referral_reward'
+        );
+      } else {
+        filtered = filtered.filter(t => (t.type || '').toLowerCase() === typeFilter.toLowerCase());
+      }
     }
 
     console.log(`🔍 Filtered transactions: ${filtered.length} of ${transactionsToFilter.length}`);
@@ -285,7 +293,7 @@ const AdminPaymentsPage: React.FC = () => {
                     ) : (
                       transactions.map((txn) => (
                         <tr key={txn.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
-                          <td className="px-6 py-4 text-sm font-mono text-slate-500">{txn.id.substring(0, 8)}...</td>
+                          <td className="px-6 py-4 text-sm font-mono text-slate-500">{txn.id.toString().substring(0, 8)}...</td>
                           <td className="px-6 py-4 text-sm">{txn.type}</td>
                           <td className={`px-6 py-4 text-sm font-bold ${txn.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {txn.currency} {txn.amount}
