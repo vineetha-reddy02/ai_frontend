@@ -124,6 +124,7 @@ const AdminUsersPage: React.FC = () => {
         // Filter by search term
         if (searchTerm) {
             filtered = filtered.filter(u =>
+                u.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 u.phoneNumber?.includes(searchTerm)
@@ -401,7 +402,13 @@ const AdminUsersPage: React.FC = () => {
                             <thead className="bg-slate-50 dark:bg-slate-700">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        ID
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         User
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        Phone
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         Role
@@ -418,6 +425,11 @@ const AdminUsersPage: React.FC = () => {
                                 {filteredUsers.map((userData) => (
                                     <tr key={userData.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                                         <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                                                {String(userData.id).substring(0, 8)}...
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-10 w-10">
                                                     <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
@@ -431,7 +443,15 @@ const AdminUsersPage: React.FC = () => {
                                                     <div className="text-sm text-slate-500 dark:text-slate-400">
                                                         {userData.email}
                                                     </div>
+                                                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                                        {userData.phoneNumber || 'No phone'}
+                                                    </div>
                                                 </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm text-slate-900 dark:text-white">
+                                                {userData.phoneNumber || <span className="text-slate-400">N/A</span>}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">

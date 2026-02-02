@@ -40,6 +40,7 @@ export interface AdminWithdrawalRequest {
     bankName: string;
     accountHolderName: string;
     accountNumber: string;
+    ifsc?: string;
     routingNumber: string;
     iban: string;
     swiftCode: string;
@@ -75,6 +76,19 @@ export interface AdminWalletAdjustment {
     reason: string;
 }
 
+export interface UserDetail {
+    id: string;
+    fullName: string;
+    email: string;
+    walletBalance: number;
+    phoneNumber?: string;
+    role?: string;
+    isApproved?: boolean;
+    createdAt?: string;
+    subscriptionStatus?: string;
+    planName?: string;
+}
+
 export const adminPaymentsService = {
     // Transactions
     getTransactions: async (params?: {
@@ -104,8 +118,8 @@ export const adminPaymentsService = {
         return apiService.get<AdminWithdrawalRequest[]>('/admin/payments/withdrawals/pending', { params });
     },
 
-    approveWithdrawal: async (withdrawalId: string, processorReference?: string) => {
-        return apiService.post(`/admin/payments/withdrawals/${withdrawalId}/approve`, { processorReference });
+    approveWithdrawal: async (withdrawalId: string, bankTransferReference?: string) => {
+        return apiService.post(`/admin/payments/withdrawals/${withdrawalId}/approve`, { bankTransferReference });
     },
 
     rejectWithdrawal: async (withdrawalId: string, rejectionReason: string) => {
@@ -136,5 +150,15 @@ export const adminPaymentsService = {
     // Wallet
     adjustWalletBalance: async (data: AdminWalletAdjustment) => {
         return apiService.post('/admin/payments/wallets/adjust-balance', data);
+    },
+
+    getUserDetails: async (userId: string) => {
+        const response = await apiService.get<UserDetail>(`/admin/payments/wallets/user/${userId}`);
+        return response;
+    },
+
+    getUserTransactions: async (userId: string) => {
+        const response = await apiService.get<AdminPaymentTransaction[]>(`/admin/payments/wallets/user/${userId}/transactions`);
+        return response || [];
     }
 };

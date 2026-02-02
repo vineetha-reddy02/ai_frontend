@@ -8,7 +8,7 @@ import {
 import AdminLayout from '../../components/AdminLayout';
 import Button from '../../components/Button';
 import { showToast } from '../../store/uiSlice';
-import { adminPaymentsService, AdminPaymentTransaction, AdminWithdrawalRequest, AdminRefundRequest } from '../../services/adminPayments';
+import { adminPaymentsService, AdminPaymentTransaction, AdminWithdrawalRequest, AdminRefundRequest, UserDetail } from '../../services/adminPayments';
 
 const AdminPaymentsPage: React.FC = () => {
   const dispatch = useDispatch();
@@ -40,6 +40,9 @@ const AdminPaymentsPage: React.FC = () => {
     type: 'Credit' as 'Credit' | 'Debit',
     reason: ''
   });
+  const [searchedUser, setSearchedUser] = useState<UserDetail | null>(null);
+  const [userTransactions, setUserTransactions] = useState<AdminPaymentTransaction[]>([]);
+  const [isFetchingUser, setIsFetchingUser] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -85,14 +88,21 @@ const AdminPaymentsPage: React.FC = () => {
     setIsLoading(true);
     try {
       if (actionType === 'approve') {
+        if (!actionNote.trim()) {
+          dispatch(showToast({ message: 'Reference number is required for manual approval', type: 'error' }));
+          setIsLoading(false);
+          return;
+        }
         await adminPaymentsService.approveWithdrawal(selectedWithdrawal.id, actionNote);
-        dispatch(showToast({ message: 'Withdrawal Approved', type: 'success' }));
+        dispatch(showToast({ message: 'Withdrawal Manually Approved', type: 'success' }));
       } else if (actionType === 'reject') {
+        if (!actionNote.trim()) {
+          dispatch(showToast({ message: 'Rejection reason is required', type: 'error' }));
+          setIsLoading(false);
+          return;
+        }
         await adminPaymentsService.rejectWithdrawal(selectedWithdrawal.id, actionNote);
         dispatch(showToast({ message: 'Withdrawal Rejected', type: 'success' }));
-      } else if (actionType === 'complete') {
-        await adminPaymentsService.completeWithdrawal(selectedWithdrawal.id, actionNote);
-        dispatch(showToast({ message: 'Withdrawal Completed', type: 'success' }));
       }
       setSelectedWithdrawal(null);
       setActionType(null);
@@ -128,16 +138,42 @@ const AdminPaymentsPage: React.FC = () => {
   };
 
   const handleWalletAdjustment = async () => {
+    if (!adjustmentData.userId || adjustmentData.amount <= 0) {
+      dispatch(showToast({ message: 'Please provide user ID and amount', type: 'error' }));
+      return;
+    }
     setIsLoading(true);
     try {
       await adminPaymentsService.adjustWalletBalance(adjustmentData);
       dispatch(showToast({ message: 'Wallet Balance Adjusted', type: 'success' }));
-      setAdjustmentData({ userId: '', amount: 0, type: 'Credit', reason: '' });
+      setAdjustmentData({ ...adjustmentData, amount: 0, reason: '' });
+      // Refresh user data after adjustment
+      handleFetchUser(adjustmentData.userId);
       fetchData();
     } catch (error: any) {
       dispatch(showToast({ message: error.response?.data?.detail || 'Adjustment failed', type: 'error' }));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFetchUser = async (userId: string) => {
+    if (!userId) return;
+    setIsFetchingUser(true);
+    try {
+      const [user, txns] = await Promise.all([
+        adminPaymentsService.getUserDetails(userId),
+        adminPaymentsService.getUserTransactions(userId)
+      ]);
+      setSearchedUser(user);
+      setUserTransactions(txns);
+    } catch (error: any) {
+      console.error('Failed to fetch user:', error);
+      setSearchedUser(null);
+      setUserTransactions([]);
+      dispatch(showToast({ message: 'User not found or fetch failed', type: 'error' }));
+    } finally {
+      setIsFetchingUser(false);
     }
   };
 
@@ -284,6 +320,7 @@ const AdminPaymentsPage: React.FC = () => {
                   <thead className="bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
                     <tr>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">ID</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">User</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Type</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Amount</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Status</th>
@@ -300,6 +337,11 @@ const AdminPaymentsPage: React.FC = () => {
                       transactions.map((txn) => (
                         <tr key={txn.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                           <td className="px-6 py-4 text-sm font-mono text-slate-500">{txn.id.toString().substring(0, 8)}...</td>
+                          <td className="px-6 py-4 text-sm">
+                            <div className="font-medium text-slate-900 dark:text-white">{(txn as any).userName || 'Unknown'}</div>
+                            <div className="text-xs text-slate-500">{(txn as any).email}</div>
+                            <div className="text-xs text-slate-400">{(txn as any).phoneNumber || 'No phone'}</div>
+                          </td>
                           <td className="px-6 py-4 text-sm">{txn.type}</td>
                           <td className={`px-6 py-4 text-sm font-bold ${txn.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {txn.currency} {txn.amount}
@@ -354,7 +396,11 @@ const AdminPaymentsPage: React.FC = () => {
                 ) : (
                   withdrawals.map((w) => (
                     <tr key={w.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
-                      <td className="px-6 py-4 text-sm">{w.userId}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="font-medium text-slate-900 dark:text-white">{(w as any).userName || 'Unknown'}</div>
+                        <div className="text-xs text-slate-500">{(w as any).email}</div>
+                        <div className="text-xs text-slate-400">{(w as any).phoneNumber || 'No phone'}</div>
+                      </td>
                       <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
                         {w.currency} {w.amount}
                       </td>
@@ -384,6 +430,7 @@ const AdminPaymentsPage: React.FC = () => {
               <thead className="bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Txn ID</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">User</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Amount</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Reason</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Status</th>
@@ -399,6 +446,11 @@ const AdminPaymentsPage: React.FC = () => {
                   refunds.map((r) => (
                     <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                       <td className="px-6 py-4 text-sm font-mono">{r.transactionId}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="font-medium text-slate-900 dark:text-white">{(r as any).userName || 'Unknown'}</div>
+                        <div className="text-xs text-slate-500">{(r as any).email}</div>
+                        <div className="text-xs text-slate-400">{(r as any).phoneNumber || 'No phone'}</div>
+                      </td>
                       <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
                         {r.currency} {r.amount}
                       </td>
@@ -423,55 +475,176 @@ const AdminPaymentsPage: React.FC = () => {
         )}
 
         {activeTab === 'adjustments' && (
-          <div className="max-w-2xl bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Manual Wallet Adjustment</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">User ID</label>
-                <input
-                  type="text"
-                  value={adjustmentData.userId}
-                  onChange={(e) => setAdjustmentData({ ...adjustmentData, userId: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700"
-                  placeholder="Enter user ID"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Amount</label>
-                  <input
-                    type="number"
-                    value={adjustmentData.amount}
-                    onChange={(e) => setAdjustmentData({ ...adjustmentData, amount: parseFloat(e.target.value) })}
-                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700"
-                  />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Manual Wallet Adjustment</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">User ID</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={adjustmentData.userId}
+                        onChange={(e) => setAdjustmentData({ ...adjustmentData, userId: e.target.value })}
+                        className="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        placeholder="Enter user ID"
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleFetchUser(adjustmentData.userId)}
+                        isLoading={isFetchingUser}
+                      >
+                        Fetch
+                      </Button>
+                    </div>
+                  </div>
+
+                  {searchedUser && (
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-lg space-y-4">
+                      {/* Personal Info */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Personal Information</h4>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          <div className="col-span-2">
+                            <span className="text-xs text-slate-500 block">Full Name</span>
+                            <span className="text-sm font-medium text-slate-900 dark:text-white">{searchedUser.fullName}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-slate-500 block">Email</span>
+                            <span className="text-sm font-medium text-slate-900 dark:text-white truncate block" title={searchedUser.email}>{searchedUser.email}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-slate-500 block">Phone</span>
+                            <span className="text-sm font-medium text-slate-900 dark:text-white">{searchedUser.phoneNumber || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* System Info */}
+                      <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">System Details</h4>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          <div>
+                            <span className="text-xs text-slate-500 block">Role</span>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${searchedUser.role === 'Instructor' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {searchedUser.role}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-slate-500 block">Joined</span>
+                            <span className="text-sm font-medium text-slate-900 dark:text-white">
+                              {searchedUser.createdAt ? new Date(searchedUser.createdAt).toLocaleDateString() : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Financial Info */}
+                      <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Financial & Status</h4>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          <div>
+                            <span className="text-xs text-slate-500 block">Wallet Balance</span>
+                            <span className="text-lg font-bold text-green-600 dark:text-green-400">₹{searchedUser.walletBalance}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-slate-500 block">Current Plan</span>
+                            <span className="text-sm font-bold text-orange-600 dark:text-orange-400">{searchedUser.planName || 'No Plan'}</span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-xs text-slate-500 block">Subscription Status</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${searchedUser.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}`}>
+                              {searchedUser.subscriptionStatus || 'None'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Amount</label>
+                      <input
+                        type="number"
+                        value={adjustmentData.amount}
+                        onChange={(e) => setAdjustmentData({ ...adjustmentData, amount: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type</label>
+                      <select
+                        value={adjustmentData.type}
+                        onChange={(e) => setAdjustmentData({ ...adjustmentData, type: e.target.value as 'Credit' | 'Debit' })}
+                        className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                      >
+                        <option value="Credit">Credit (Add)</option>
+                        <option value="Debit">Debit (Deduct)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Reason</label>
+                    <textarea
+                      value={adjustmentData.reason}
+                      onChange={(e) => setAdjustmentData({ ...adjustmentData, reason: e.target.value })}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                      rows={3}
+                      placeholder="Reason for adjustment"
+                    />
+                  </div>
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={handleWalletAdjustment} isLoading={isLoading} disabled={!searchedUser}>
+                      Submit Adjustment
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type</label>
-                  <select
-                    value={adjustmentData.type}
-                    onChange={(e) => setAdjustmentData({ ...adjustmentData, type: e.target.value as 'Credit' | 'Debit' })}
-                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700"
-                  >
-                    <option value="Credit">Credit (Add)</option>
-                    <option value="Debit">Debit (Deduct)</option>
-                  </select>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2">
+              <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Transaction History</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Recent wallet activity for the selected user</p>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Reason</label>
-                <textarea
-                  value={adjustmentData.reason}
-                  onChange={(e) => setAdjustmentData({ ...adjustmentData, reason: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700"
-                  rows={3}
-                  placeholder="Reason for adjustment"
-                />
-              </div>
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleWalletAdjustment} isLoading={isLoading}>
-                  Submit Adjustment
-                </Button>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 dark:bg-slate-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Type</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Amount</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                      {isFetchingUser ? (
+                        <tr><td colSpan={4} className="p-8 text-center">Loading history...</td></tr>
+                      ) : userTransactions.length === 0 ? (
+                        <tr><td colSpan={4} className="p-8 text-center text-slate-500">No transactions found</td></tr>
+                      ) : (
+                        userTransactions.map((txn) => (
+                          <tr key={txn.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                            <td className="px-6 py-4 text-sm text-slate-500">
+                              {new Date(txn.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 text-sm capitalize">{txn.type}</td>
+                            <td className={`px-6 py-4 text-sm font-bold ${txn.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              ₹{txn.amount}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate" title={txn.description}>
+                              {txn.description}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -485,22 +658,23 @@ const AdminPaymentsPage: React.FC = () => {
                 {actionType} {selectedWithdrawal ? 'Withdrawal' : 'Refund'}
               </h2>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                {actionType === 'approve' && selectedWithdrawal
-                  ? 'Are you sure you want to Approve & Pay this request? This will send real money via RazorpayX immediately.'
-                  : `Are you sure you want to ${actionType} this request?`}
+                {actionType === 'approve' ? 'Are you sure you want to approve this withdrawal? Please ensure you have transferred the funds manually before confirming.' : `Are you sure you want to ${actionType} this request?`}
               </p>
 
               {actionType === 'approve' && selectedWithdrawal && (
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <p className="text-xs text-blue-700 dark:text-blue-400 font-medium flex items-center gap-2">
-                    ℹ️ <strong>Instant Payout:</strong> Clicking confirm will initiate an IMPS bank transfer of ₹{selectedWithdrawal.amount} and deduct the user's wallet balance.
+                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-xs text-yellow-700 dark:text-yellow-400 font-medium flex items-center gap-2">
+                    ⚠️ <strong>Manual Payout:</strong> You must transfer ₹{selectedWithdrawal.amount} to the bank details below and provide the transaction reference ID.
                   </p>
+                  <div className="mt-2 text-[10px] text-slate-500 font-mono">
+                    {selectedWithdrawal.bankName} - {selectedWithdrawal.accountNumber} ({selectedWithdrawal.ifsc})
+                  </div>
                 </div>
               )}
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  {actionType === 'reject' ? 'Rejection Reason' : 'Notes / Reference'}
+                  {actionType === 'reject' ? 'Rejection Reason' : 'Bank Transfer Reference ID'}
                 </label>
                 <textarea
                   value={actionNote}
