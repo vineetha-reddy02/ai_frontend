@@ -43,6 +43,11 @@ const AdminPaymentsPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchData();
+    }, 30000);
+    return () => clearInterval(interval);
   }, [activeTab]);
 
   const fetchData = async () => {
@@ -128,6 +133,7 @@ const AdminPaymentsPage: React.FC = () => {
       await adminPaymentsService.adjustWalletBalance(adjustmentData);
       dispatch(showToast({ message: 'Wallet Balance Adjusted', type: 'success' }));
       setAdjustmentData({ userId: '', amount: 0, type: 'Credit', reason: '' });
+      fetchData();
     } catch (error: any) {
       dispatch(showToast({ message: error.response?.data?.detail || 'Adjustment failed', type: 'error' }));
     } finally {
@@ -361,9 +367,8 @@ const AdminPaymentsPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm flex gap-2">
-                        <Button size="sm" onClick={() => { setSelectedWithdrawal(w); setActionType('approve'); }}>Approve</Button>
+                        <Button size="sm" onClick={() => { setSelectedWithdrawal(w); setActionType('approve'); }}>Approve & Pay</Button>
                         <Button size="sm" variant="danger" onClick={() => { setSelectedWithdrawal(w); setActionType('reject'); }}>Reject</Button>
-                        <Button size="sm" variant="outline" onClick={() => { setSelectedWithdrawal(w); setActionType('complete'); }}>Complete</Button>
                       </td>
                     </tr>
                   ))
@@ -480,8 +485,18 @@ const AdminPaymentsPage: React.FC = () => {
                 {actionType} {selectedWithdrawal ? 'Withdrawal' : 'Refund'}
               </h2>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                Are you sure you want to {actionType} this request?
+                {actionType === 'approve' && selectedWithdrawal
+                  ? 'Are you sure you want to Approve & Pay this request? This will send real money via RazorpayX immediately.'
+                  : `Are you sure you want to ${actionType} this request?`}
               </p>
+
+              {actionType === 'approve' && selectedWithdrawal && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-xs text-blue-700 dark:text-blue-400 font-medium flex items-center gap-2">
+                    ℹ️ <strong>Instant Payout:</strong> Clicking confirm will initiate an IMPS bank transfer of ₹{selectedWithdrawal.amount} and deduct the user's wallet balance.
+                  </p>
+                </div>
+              )}
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">

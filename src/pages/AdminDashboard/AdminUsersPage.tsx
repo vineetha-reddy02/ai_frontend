@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Users, Loader, AlertCircle, CheckCircle, X, Eye, ArrowLeft, Calendar, Clock, Plus, EyeOff, Trash2 } from 'lucide-react';
+import { Users, Loader, AlertCircle, CheckCircle, X, Eye, ArrowLeft, Calendar, Clock, Plus, EyeOff, Trash2, Download } from 'lucide-react';
 import { RootState } from '../../store';
 import { adminService } from '../../services/admin';
 import { subscriptionsService } from '../../services/subscriptions';
@@ -17,6 +17,7 @@ interface UserData {
     phoneNumber?: string;
     role: string;
     subscriptionStatus?: string;
+    planName?: string;
     isApproved?: boolean;
     createdAt?: string;
     avatar?: string;
@@ -31,6 +32,7 @@ const AdminUsersPage: React.FC = () => {
     const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
     const [stats, setStats] = useState({ total: 0, instructors: 0, learners: 0 });
     const [filterRole, setFilterRole] = useState<'all' | 'instructor' | 'user'>('all');
+    const [filterPayment, setFilterPayment] = useState<'all' | 'paid' | 'unpaid'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
     const [showDetails, setShowDetails] = useState(false);
@@ -112,6 +114,13 @@ const AdminUsersPage: React.FC = () => {
             filtered = filtered.filter(u => String(u.role).toLowerCase() === filterRole);
         }
 
+        // Filter by payment status
+        if (filterPayment === 'paid') {
+            filtered = filtered.filter(u => ['active', 'trialing', 'succeeded'].includes(u.subscriptionStatus?.toLowerCase() || ''));
+        } else if (filterPayment === 'unpaid') {
+            filtered = filtered.filter(u => !['active', 'trialing', 'succeeded'].includes(u.subscriptionStatus?.toLowerCase() || ''));
+        }
+
         // Filter by search term
         if (searchTerm) {
             filtered = filtered.filter(u =>
@@ -122,7 +131,34 @@ const AdminUsersPage: React.FC = () => {
         }
 
         setFilteredUsers(filtered);
-    }, [filterRole, searchTerm, users]);
+    }, [filterRole, filterPayment, searchTerm, users]);
+
+    const downloadCSV = () => {
+        const headers = ['ID', 'Full Name', 'Email', 'Phone', 'Role', 'Status', 'Subscription', 'Plan', 'Joined Date'];
+        const csvRows = [
+            headers.join(','),
+            ...filteredUsers.map(u => [
+                u.id,
+                `"${u.fullName}"`,
+                u.email,
+                u.phoneNumber || 'N/A',
+                u.role,
+                String(u.role).toLowerCase().includes('admin') ? 'Approved' : (u.isApproved ? 'Approved' : 'Pending'),
+                u.subscriptionStatus || 'No Subscription',
+                u.planName || 'N/A',
+                u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'
+            ].join(','))
+        ];
+
+        const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `users_list_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const handleStatusChange = async (userId: string, newStatus: 'active' | 'inactive' | 'banned') => {
         try {
@@ -254,6 +290,14 @@ const AdminUsersPage: React.FC = () => {
                         </Button>
                         <Button
                             variant="primary"
+                            onClick={downloadCSV}
+                            className="flex items-center gap-2"
+                        >
+                            <Download size={20} />
+                            Download List
+                        </Button>
+                        <Button
+                            variant="primary"
                             onClick={() => navigate('/admin/instructors')}
                         >
                             Manage Instructors
@@ -304,25 +348,48 @@ const AdminUsersPage: React.FC = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                         />
-                        <div className="flex gap-2">
-                            <Button
-                                variant={filterRole === 'all' ? 'primary' : 'secondary'}
-                                onClick={() => setFilterRole('all')}
-                            >
-                                All Users ({users.length})
-                            </Button>
-                            <Button
-                                variant={filterRole === 'instructor' ? 'primary' : 'secondary'}
-                                onClick={() => setFilterRole('instructor')}
-                            >
-                                Instructors ({stats.instructors})
-                            </Button>
-                            <Button
-                                variant={filterRole === 'user' ? 'primary' : 'secondary'}
-                                onClick={() => setFilterRole('user')}
-                            >
-                                Learners ({stats.learners})
-                            </Button>
+                        <div className="flex flex-wrap gap-2">
+                            <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+                                <button
+                                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${filterRole === 'all' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                    onClick={() => setFilterRole('all')}
+                                >
+                                    All
+                                </button>
+                                <button
+                                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${filterRole === 'instructor' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                    onClick={() => setFilterRole('instructor')}
+                                >
+                                    Instructors
+                                </button>
+                                <button
+                                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${filterRole === 'user' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                    onClick={() => setFilterRole('user')}
+                                >
+                                    Learners
+                                </button>
+                            </div>
+
+                            <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+                                <button
+                                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${filterPayment === 'all' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                    onClick={() => setFilterPayment('all')}
+                                >
+                                    All Payment
+                                </button>
+                                <button
+                                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${filterPayment === 'paid' ? 'bg-white dark:bg-slate-600 text-green-600 shadow-sm' : 'text-slate-500'}`}
+                                    onClick={() => setFilterPayment('paid')}
+                                >
+                                    Paid
+                                </button>
+                                <button
+                                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${filterPayment === 'unpaid' ? 'bg-white dark:bg-slate-600 text-red-600 shadow-sm' : 'text-slate-500'}`}
+                                    onClick={() => setFilterPayment('unpaid')}
+                                >
+                                    Unpaid
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -376,11 +443,11 @@ const AdminUsersPage: React.FC = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${userData.isApproved
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${String(userData.role).toLowerCase().includes('admin') || userData.isApproved
                                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                                 : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                                                 }`}>
-                                                {userData.isApproved ? 'Approved' : 'Pending'}
+                                                {String(userData.role).toLowerCase().includes('admin') || userData.isApproved ? 'Approved' : 'Pending'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
